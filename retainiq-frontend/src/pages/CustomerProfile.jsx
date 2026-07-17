@@ -1,200 +1,176 @@
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Brain, Zap, Target, AlertTriangle, ShieldCheck, Activity } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, Zap, CheckCircle2, History, AlertTriangle } from "lucide-react";
 import RiskBadge from "../components/RiskBadge";
 import { customers } from "../data/mockCustomers";
 
 export default function CustomerProfile() {
   const { id } = useParams();
-  const customer = customers.find((c) => c.id === id);
+  const customer = customers.find((c) => c.id === id) || customers[0]; // Fallback to Amy Tan for demo
+  
+  // Simulator State
+  const [selectedActions, setSelectedActions] = useState([]);
+  const [simulatedChurn, setSimulatedChurn] = useState(customer.churnProbability);
 
-  if (!customer) {
-    return (
-      <div className="max-w-7xl mx-auto">
-        <Link to="/customers" className="text-sm font-bold text-[var(--color-brand)] hover:underline">← Back to customers</Link>
-        <p className="mt-4 text-ink/60 font-medium">Customer not found.</p>
-      </div>
-    );
-  }
+  const toggleAction = (actionName, dropValue) => {
+    let newActions = [...selectedActions];
+    if (newActions.includes(actionName)) {
+      newActions = newActions.filter(a => a !== actionName);
+    } else {
+      newActions.push(actionName);
+    }
+    setSelectedActions(newActions);
+    
+    // Simulate drop
+    let newRisk = customer.churnProbability;
+    if (newActions.includes("Discount 20%")) newRisk -= 26;
+    if (newActions.includes("Training")) newRisk -= 49;
+    if (newActions.includes("Free Trial")) newRisk -= 15;
+    if (newActions.includes("Customer Success Call")) newRisk -= 20;
+    
+    setSimulatedChurn(Math.max(5, newRisk)); // Floor at 5%
+  };
+
+  const handleApplyAction = () => {
+    alert("Task Added to Task Center!");
+  };
 
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto pb-10">
       <Link to="/customers" className="flex w-fit items-center gap-1.5 text-sm font-bold text-ink/60 hover:text-[var(--color-brand)] transition-colors">
-        <ArrowLeft size={16} /> Back to Directory
+        <ArrowLeft size={16} /> Back to Customers
       </Link>
 
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="font-display text-3xl font-bold">{customer.name}</h1>
-            <span className={`px-2.5 py-1 text-xs font-bold rounded-md border shadow-sm ${
-                customer.status === 'Active' ? 'bg-green-50 text-green-700 border-green-200' :
-                customer.status === 'New' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                'bg-gray-100 text-gray-600 border-gray-200'
-              }`}>
-                {customer.status} Status
-            </span>
-          </div>
-          <p className="text-sm text-ink/60 font-medium">{customer.company} • <span className="font-bold text-ink">{customer.plan} Plan</span></p>
+          <h1 className="font-display text-3xl font-bold">{customer.name}</h1>
+          <p className="text-sm text-ink/60 font-medium mt-1">{customer.company} • {customer.email}</p>
         </div>
-        <div className="flex flex-col items-start md:items-end gap-2">
-          <RiskBadge risk={customer.risk} />
-          <span className="text-sm font-bold bg-gray-100 px-3 py-1 rounded-lg text-gray-700 border border-gray-200 shadow-sm">Segment: {customer.segment}</span>
+        <div className="flex gap-4 items-center">
+          <div className="text-right">
+            <span className="text-sm font-bold bg-gray-100 px-3 py-1 rounded-lg text-gray-700 shadow-sm block mb-2">{customer.plan} Plan</span>
+            <button className="text-xs font-bold text-[var(--color-brand)] hover:underline">Edit Customer</button>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* 1. Customer Health Score Calculation */}
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-50 rounded-lg text-[var(--color-brand)]">
-                <Activity size={24} />
-              </div>
-              <h2 className="text-lg font-bold font-display">Health Calculation</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Column 1: Health & Predictions */}
+        <div className="flex flex-col gap-6">
+          <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm text-center">
+            <h2 className="text-lg font-bold font-display mb-4">Health Score</h2>
+            <div className="w-32 h-32 mx-auto rounded-full border-8 border-rose-500 flex items-center justify-center mb-4">
+              <span className="text-4xl font-display font-bold text-rose-600">{customer.healthScore}</span>
             </div>
-            <div className="text-right">
-              <p className="text-4xl font-bold font-display leading-none">{customer.healthScore}<span className="text-xl text-ink/40">/100</span></p>
-            </div>
+            <p className="text-sm font-bold text-rose-600 bg-rose-50 inline-block px-3 py-1 rounded-lg mb-4">Poor</p>
+            <p className="text-xs font-bold text-ink/50">↓ Dropped 12 points</p>
+            <button className="mt-4 w-full py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold hover:bg-gray-100">View Analysis</button>
           </div>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b-2 border-gray-100 text-left text-xs uppercase tracking-wider text-ink/50 font-bold">
-                <th className="py-3">Indicator</th>
-                <th className="py-3 text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {customer.indicators.map((ind, i) => (
-                <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
-                  <td className="py-4 font-semibold text-ink">{ind.name}</td>
-                  <td className="py-4 text-right">
-                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold border shadow-sm ${
-                      ind.status === 'danger' ? 'bg-red-50 text-red-700 border-red-100' :
-                      ind.status === 'warning' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' : 'bg-green-50 text-green-700 border-green-100'
-                    }`}>
-                      {ind.value}
-                    </span>
-                  </td>
-                </tr>
+
+          <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm text-center">
+            <h2 className="text-lg font-bold font-display mb-4">Churn Prediction</h2>
+            <div className="w-full bg-gray-100 rounded-full h-4 mb-2 overflow-hidden">
+              <div className="bg-rose-500 h-4 rounded-full" style={{ width: `${customer.churnProbability}%` }}></div>
+            </div>
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-4xl font-display font-bold text-rose-600">{customer.churnProbability}%</span>
+              <RiskBadge risk={customer.risk} />
+            </div>
+            <button className="mt-2 w-full py-2 bg-[var(--color-brand)] text-white rounded-lg text-sm font-bold hover:bg-[var(--color-brand-dark)]">Predict Again (AI)</button>
+          </div>
+        </div>
+
+        {/* Column 2: Explainable AI & Activity */}
+        <div className="flex flex-col gap-6">
+          <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
+            <h2 className="text-lg font-bold font-display mb-4 flex items-center gap-2"><Brain className="text-[var(--color-accent)]"/> Explainable AI Reason</h2>
+            <ul className="space-y-4">
+              {customer.churnAnalysis.map((reason, i) => (
+                <li key={i} className="bg-rose-50 border border-rose-100 p-3 rounded-xl flex items-start gap-3">
+                  <span className="text-rose-600 mt-0.5">↓</span>
+                  <div>
+                    <p className="text-sm font-bold text-rose-900">{reason}</p>
+                    <button className="text-xs font-bold text-rose-600 hover:underline mt-1">More Detail</button>
+                  </div>
+                </li>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </ul>
+          </div>
 
-        {/* 2. AI Churn Prediction */}
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-50 rounded-lg text-[var(--color-risk-high)]">
-                <AlertTriangle size={24} />
+          <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
+            <h2 className="text-lg font-bold font-display mb-4">Recent Activity</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-gray-50 rounded-xl">
+                <p className="text-xs font-bold text-ink/50 uppercase">Last Login</p>
+                <p className="text-lg font-bold mt-1">{customer.recentActivity.lastLogin}</p>
               </div>
-              <h2 className="text-lg font-bold font-display">Churn Prediction</h2>
-            </div>
-            <div className="text-right">
-              <p className="text-4xl font-bold font-display leading-none text-[var(--color-risk-high)]">{customer.churnProbability}%</p>
+              <div className="p-4 bg-gray-50 rounded-xl">
+                <p className="text-xs font-bold text-ink/50 uppercase">Sessions</p>
+                <p className="text-lg font-bold mt-1">{customer.recentActivity.sessions}</p>
+              </div>
+              <div className="p-4 bg-gray-50 rounded-xl col-span-2">
+                <p className="text-xs font-bold text-ink/50 uppercase">Feature Usage</p>
+                <p className="text-lg font-bold mt-1 text-rose-600">{customer.recentActivity.featureUsage}</p>
+              </div>
             </div>
           </div>
-          <p className="text-sm font-bold text-ink/80 mb-3 bg-gray-50 p-2 rounded-lg inline-block">AI Raw Analysis:</p>
-          <ul className="list-disc pl-6 space-y-2 text-sm font-medium text-ink/70">
-            {customer.churnAnalysis.map((analysis, i) => (
-              <li key={i}>{analysis}</li>
-            ))}
-          </ul>
-          {customer.churnProbability > 50 && (
-             <div className="mt-6 bg-rose-50 border-2 border-rose-100 rounded-xl p-4 flex items-start gap-3 shadow-sm">
-               <span className="text-rose-500 text-xl mt-0.5">🔴</span>
-               <p className="text-sm text-rose-900 font-medium leading-relaxed"><span className="font-bold">High Risk Alert:</span> Take preventive action before {customer.name.split(' ')[0]} cancels their subscription.</p>
-             </div>
-          )}
         </div>
 
-        {/* 3. Explainable AI Insight */}
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white p-6 shadow-sm lg:col-span-1">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-purple-50 rounded-lg text-[var(--color-accent)]">
-              <Brain size={24} />
+        {/* Column 3: Recommendations & Timeline & Simulator */}
+        <div className="flex flex-col gap-6">
+          <div className="bg-gradient-to-br from-blue-50 to-[var(--color-brand-soft)] p-6 rounded-2xl border border-[var(--color-brand)]/20 shadow-sm">
+            <h2 className="text-lg font-bold font-display mb-4 text-[var(--color-brand-dark)]">AI Recommendation</h2>
+            <div className="bg-white p-4 rounded-xl shadow-sm mb-4">
+              <p className="text-xl font-black">{customer.recommendation.action}</p>
             </div>
-            <h2 className="text-lg font-bold font-display">Explainable AI Insights</h2>
+            <div className="flex gap-2">
+              <button onClick={handleApplyAction} className="flex-1 py-2 bg-[var(--color-brand)] text-white rounded-lg text-sm font-bold hover:bg-opacity-90">Apply</button>
+              <button className="px-4 py-2 bg-white text-ink border border-gray-200 rounded-lg text-sm font-bold hover:bg-gray-50">Save</button>
+              <button className="px-4 py-2 bg-white text-rose-600 border border-rose-200 rounded-lg text-sm font-bold hover:bg-rose-50">Ignore</button>
+            </div>
           </div>
-          <p className="text-sm font-medium text-ink/60 mb-5">Natural language explanation of the predictive model:</p>
-          <ul className="space-y-3">
-            {customer.insights.map((insight, i) => (
-              <li key={i} className="flex items-start gap-3 text-sm font-semibold text-ink/80 bg-gray-50 p-3.5 rounded-xl border border-gray-100 shadow-sm">
-                <span className="text-[var(--color-accent)] font-bold mt-0.5"><Sparkles size={16}/></span> 
-                {insight}
-              </li>
-            ))}
-          </ul>
-        </div>
 
-        {/* 4. Personalized Recommendation Engine */}
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white p-6 shadow-sm lg:col-span-1 flex flex-col">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-blue-50 rounded-lg text-[var(--color-brand)]">
-              <Target size={24} />
+          {/* Dedicated Simulator from PRD */}
+          <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <Zap className="text-amber-500" />
+              <h2 className="text-lg font-bold font-display">AI Action Simulator</h2>
             </div>
-            <h2 className="text-lg font-bold font-display">Personalized Action Plan</h2>
-          </div>
-          <div className="mb-5">
-            <p className="text-xs font-bold uppercase tracking-wider text-ink/50 mb-2">Triggers Detected</p>
-            <div className="flex flex-wrap gap-2">
-              {customer.aiDetection.map((det, i) => (
-                <span key={i} className="bg-blue-50 text-blue-800 text-xs font-bold px-3 py-1.5 rounded-lg border border-blue-100">{det}</span>
+            <p className="text-sm font-bold text-ink/60 mb-4 bg-gray-50 p-3 rounded-lg flex justify-between">
+              Current Churn <span>{customer.churnProbability}%</span>
+            </p>
+            <div className="space-y-3 mb-6">
+              <p className="text-xs font-bold text-ink/50 uppercase">Choose Action</p>
+              {["Discount 20%", "Training", "Free Trial", "Customer Success Call"].map(action => (
+                <label key={action} className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50">
+                  <input type="checkbox" className="w-4 h-4 text-[var(--color-brand)] rounded" checked={selectedActions.includes(action)} onChange={() => toggleAction(action)} />
+                  <span className="text-sm font-bold">{action}</span>
+                </label>
               ))}
             </div>
+            <div className="bg-[var(--color-ink)] text-white p-4 rounded-xl text-center">
+              <p className="text-xs font-bold text-white/60 uppercase">Predicted Churn After Action</p>
+              <p className="text-4xl font-black mt-2 font-display">{simulatedChurn}%</p>
+              {simulatedChurn < 20 && <p className="text-xs font-bold text-emerald-400 mt-2">⭐ AI Recommended Combination</p>}
+            </div>
           </div>
-          <div className="mt-auto bg-gradient-to-br from-[var(--color-brand-soft)] to-blue-50 border-2 border-[var(--color-brand)]/20 rounded-xl p-5 shadow-inner">
-            <p className="text-xs uppercase tracking-wide text-[var(--color-brand)] font-black mb-1 flex items-center gap-1"><Zap size={14}/> Recommended Step</p>
-            <p className="text-xl font-bold text-ink mt-2 mb-2 leading-tight">{customer.recommendation.action}</p>
-            <p className="text-sm font-medium text-ink/70">{customer.recommendation.reason}</p>
+
+          <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
+            <h2 className="text-lg font-bold font-display mb-4 flex items-center gap-2"><History/> Customer Timeline</h2>
+            <div className="space-y-4 border-l-2 border-gray-100 ml-3 pl-4 relative">
+              {customer.timeline.map((t, i) => (
+                <div key={i} className="relative">
+                  <div className={`absolute -left-5.5 mt-1 w-3 h-3 rounded-full ${t.type === 'success' ? 'bg-emerald-500' : t.type === 'danger' ? 'bg-rose-500' : 'bg-amber-500'} ring-4 ring-white`}></div>
+                  <p className="text-xs font-bold text-ink/50">{t.date}</p>
+                  <p className="text-sm font-bold mt-0.5">{t.event}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* 6. AI Action Simulator */}
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white p-6 shadow-sm lg:col-span-2">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-50 rounded-lg text-[var(--color-risk-mid)]">
-                <Zap size={24} />
-              </div>
-              <h2 className="text-lg font-bold font-display">Retention Simulator</h2>
-            </div>
-          </div>
-          <p className="text-sm font-medium text-ink/60 mb-6 bg-gray-50 p-3 rounded-lg">Evaluate different strategies to see their predicted impact on churn risk before taking action.</p>
-          
-          <div className="overflow-hidden rounded-xl border-2 border-[var(--color-border)] shadow-sm">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-gray-50 border-b-2 border-[var(--color-border)]">
-                <tr>
-                  <th className="px-6 py-4 font-bold text-ink/60 uppercase tracking-wider text-xs">Simulated Action</th>
-                  <th className="px-6 py-4 font-bold text-ink/60 uppercase tracking-wider text-xs w-48 text-right">Predicted Risk</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-border)]">
-                {customer.simulations.map((sim, i) => (
-                  <tr key={i} className={`transition-colors ${sim.action === customer.bestSimulation ? "bg-emerald-50/50" : "hover:bg-gray-50"}`}>
-                    <td className="px-6 py-4 font-bold text-ink text-base">
-                      {sim.action}
-                      {sim.action === customer.bestSimulation && (
-                        <span className="ml-3 inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 border border-emerald-200 px-2.5 py-1 text-xs font-black text-emerald-800 shadow-sm">
-                          <ShieldCheck size={14}/> Best ROI
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <span className={`font-black text-lg px-3 py-1 rounded-lg ${
-                        sim.predictedChurn > 70 ? 'bg-red-50 text-[var(--color-risk-high)]' : 
-                        sim.predictedChurn > 40 ? 'bg-yellow-50 text-[var(--color-risk-mid)]' : 'bg-green-50 text-[var(--color-risk-low)]'
-                      }`}>
-                        {sim.predictedChurn}%
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
       </div>
     </div>
   );

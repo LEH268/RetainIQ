@@ -3,14 +3,9 @@ export function downloadCSV(data, filename) {
     alert("No data available to export.");
     return;
   }
-
-  // Get headers
   const headers = Object.keys(data[0]).join(",");
-  
-  // Convert objects to comma-separated strings
   const csvRows = data.map(row => {
     return Object.values(row).map(value => {
-      // Escape quotes and wrap in quotes if there's a comma
       const stringValue = String(value);
       if (stringValue.includes(",")) {
         return `"${stringValue.replace(/"/g, '""')}"`;

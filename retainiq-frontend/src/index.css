@@ -4,14 +4,14 @@
   --color-ink: #0F172A;      
   --color-canvas: #F8FAFC;      
   --color-panel: #FFFFFF;      
-  --color-brand: #0284C7; /* Vibrant Blue */
+  --color-brand: #0284C7; 
   --color-brand-soft: #E0F2FE;      
   --color-brand-dark: #0369A1;
-  --color-accent: #8B5CF6; /* Violet for AI features */
+  --color-accent: #8B5CF6; 
   --color-accent-soft: #EDE9FE;
-  --color-risk-high: #E11D48; /* Rose */
-  --color-risk-mid: #F59E0B; /* Amber */
-  --color-risk-low: #10B981; /* Emerald */
+  --color-risk-high: #E11D48; 
+  --color-risk-mid: #F59E0B; 
+  --color-risk-low: #10B981; 
   --color-border: #E2E8F0;      
   --font-display: "Space Grotesk", "Inter", sans-serif;      
   --font-body: "Inter", system-ui, sans-serif;  
@@ -28,7 +28,6 @@ h1, h2, h3, h4 {
   font-family: var(--font-display);  
 }
 
-/* Custom Scrollbar for a polished look */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

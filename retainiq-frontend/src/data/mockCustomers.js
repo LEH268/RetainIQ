@@ -1,141 +1,87 @@
-// /* BACKEND INTEGRATION: Replace this mock data with real API endpoints */
-
 export const customers = [
   { 
-    id: "CUS-1042", 
-    name: "Sarah Lim", 
-    email: "sarah.lim@example.com", 
-    company: "Lim & Co", 
-    plan: "Pro", 
-    status: "Active", // Filterable: Active, New, Cancelled
-    healthScore: 42, 
-    risk: "High Risk", 
-    churnProbability: 88, 
-    segment: "At Risk",
-    indicators: [
-      { name: "Login Frequency", value: "Low", status: "warning" },
-      { name: "Feature Usage", value: "35%", status: "danger" },
-      { name: "Payment History", value: "On Time", status: "success" },
-      { name: "Support Tickets", value: "2 Complaints", status: "danger" }
-    ],
-    churnAnalysis: [
-      "Login frequency dropped by 60%",
-      "No activity for the past 14 days"
-    ],
-    insights: [
-      "Login frequency decreased by 60%",
-      "Customer has not used premium features",
-      "Submitted 2 support complaints recently",
-      "Product usage reduced by 40%"
-    ],
-    aiDetection: ["Very low product usage", "Recently joined"],
-    recommendation: {
-      action: "Recommend onboarding tutorial and product training.",
-      reason: "Highest reduction in churn risk with the lowest business cost."
-    },
-    simulations: [
-      { action: "Offer 20% Discount", predictedChurn: 58 },
-      { action: "Assign Customer Success Manager", predictedChurn: 41 },
-      { action: "Free Product Training", predictedChurn: 26 },
-      { action: "No Action", predictedChurn: 88 }
-    ],
-    bestSimulation: "Free Product Training"
-  },
-  { 
-    id: "CUS-1043", 
-    name: "Jason Tan", 
-    email: "jason.tan@techcorp.com", 
-    company: "Tech Corp", 
-    plan: "Enterprise", 
-    status: "Cancelled", 
-    healthScore: 21, 
-    risk: "High Risk", 
-    churnProbability: 91, 
-    segment: "Inactive",
+    id: "CUS-1042", name: "Amy Tan", email: "amy.tan@example.com", company: "Retail Co", plan: "Premium", status: "Active", 
+    healthScore: 35, risk: "High Risk", churnProbability: 91, segment: "At Risk",
     indicators: [
       { name: "Login Frequency", value: "Very Low", status: "danger" },
-      { name: "Feature Usage", value: "15%", status: "danger" },
-      { name: "Payment History", value: "Late 10 days", status: "warning" },
-      { name: "Support Tickets", value: "4 Complaints", status: "danger" }
+      { name: "Feature Usage", value: "20%", status: "danger" },
+      { name: "Payment History", value: "Late 28 Days", status: "danger" },
+      { name: "Support Tickets", value: "3 Complaints", status: "danger" }
     ],
-    churnAnalysis: [
-      "Login frequency dropped by 70%",
-      "Subscription usage decreased significantly",
-      "No activity for the past 21 days"
-    ],
-    insights: [
-      "Login frequency decreased by 70%",
-      "Customer has not used premium features",
-      "Submitted 4 support complaints",
-      "Product usage reduced by 55%"
-    ],
-    aiDetection: ["Price-sensitive customer", "Subscription renewal next week"],
-    recommendation: {
-      action: "Offer a 15% renewal discount.",
-      reason: "Customer is highly price-sensitive and at immediate risk of non-renewal."
-    },
+    churnAnalysis: ["Login decreased", "Payment overdue", "Support complaints", "Unused features"],
+    insights: ["Login frequency decreased significantly over 30 days", "Last payment was 28 days ago", "Multiple support complaints logged"],
+    aiDetection: ["Price-sensitive customer", "Low product usage"],
+    recommendation: { action: "Customer Success Call", reason: "Direct intervention required to resolve complaints." },
     simulations: [
-      { action: "Offer 15% Discount", predictedChurn: 35 },
-      { action: "Send automated email", predictedChurn: 85 },
-      { action: "Schedule Call", predictedChurn: 60 },
-      { action: "No Action", predictedChurn: 91 }
+      { action: "Discount 20%", predictedChurn: 65 },
+      { action: "Training", predictedChurn: 42 },
+      { action: "Training + Discount", predictedChurn: 18 },
+      { action: "Free Trial", predictedChurn: 50 },
+      { action: "Customer Success Call", predictedChurn: 22 }
     ],
-    bestSimulation: "Offer 15% Discount"
+    bestSimulation: "Training + Discount",
+    timeline: [
+      { date: "June 15", event: "Upgraded to Premium", type: "success" },
+      { date: "July 02", event: "Submitted 3 Complaints", type: "danger" },
+      { date: "July 15", event: "Late Payment Triggered", type: "warning" },
+      { date: "Today", event: "Marked as High Risk (91%)", type: "danger" }
+    ],
+    recentActivity: { lastLogin: "20 days ago", sessions: 3, featureUsage: "20%" }
   },
   { 
-    id: "CUS-1044", 
-    name: "Emily Chen", 
-    email: "emily.c@innovate.net", 
-    company: "Innovate Net", 
-    plan: "Basic", 
-    status: "New", 
-    healthScore: 85, 
-    risk: "Healthy", 
-    churnProbability: 12, 
-    segment: "VIP",
+    id: "CUS-1043", name: "John Lee", email: "john.lee@techcorp.com", company: "Tech Corp", plan: "Enterprise", status: "Active", 
+    healthScore: 82, risk: "Healthy", churnProbability: 12, segment: "Loyal",
     indicators: [
       { name: "Login Frequency", value: "High", status: "success" },
-      { name: "Feature Usage", value: "92%", status: "success" },
-      { name: "Payment History", value: "On Time", status: "success" },
-      { name: "Support Tickets", value: "0", status: "success" }
+      { name: "Feature Usage", value: "85%", status: "success" },
+      { name: "Payment History", value: "On Time", status: "success" }
     ],
-    churnAnalysis: [
-      "Consistent daily activity",
-      "High reliance on core APIs"
-    ],
-    insights: [
-      "Platform dependency is high",
-      "Approaching limits on current tier"
-    ],
-    aiDetection: ["Storage usage: 95%", "API usage: 98%"],
-    recommendation: {
-      action: "Upgrade to Pro Plan.",
-      reason: "Customer is hitting limits and needs more capacity to continue operating smoothly."
-    },
+    churnAnalysis: ["Consistent platform usage", "Zero payment issues"],
+    insights: ["Platform dependency is high", "Zero support tickets in 3 months"],
+    aiDetection: ["High API dependency"],
+    recommendation: { action: "Offer Enterprise Add-on", reason: "Customer is engaged and ready for upselling." },
     simulations: [
-      { action: "Suggest Pro Upgrade", predictedChurn: 2 },
-      { action: "Offer Free Storage", predictedChurn: 10 },
+      { action: "Offer Add-on", predictedChurn: 5 },
       { action: "No Action", predictedChurn: 12 }
     ],
-    bestSimulation: "Suggest Pro Upgrade"
+    bestSimulation: "Offer Add-on",
+    timeline: [
+      { date: "Jan 10", event: "Onboarded", type: "success" },
+      { date: "Mar 05", event: "Added 10 team members", type: "success" },
+      { date: "Today", event: "Healthy Engagement", type: "success" }
+    ],
+    recentActivity: { lastLogin: "Today", sessions: 45, featureUsage: "85%" }
   }
 ];
 
 export const healthDistribution = [
-  { name: "Healthy", value: 810, color: "var(--color-risk-low)" },
-  { name: "Moderate Risk", value: 310, color: "var(--color-risk-mid)" },
-  { name: "High Risk", value: 128, color: "var(--color-risk-high)" },
+  { name: "Healthy", value: 1800, color: "var(--color-risk-low)" },
+  { name: "Moderate Risk", value: 438, color: "var(--color-risk-mid)" },
+  { name: "High Risk", value: 212, color: "var(--color-risk-high)" },
 ];
 
 export const churnTrend = [
-  { month: "Jan", predicted: 5.1 }, { month: "Feb", predicted: 5.6 }, { month: "Mar", predicted: 6.4 },
-  { month: "Apr", predicted: 6.0 }, { month: "May", predicted: 7.2 }, { month: "Jun", predicted: 6.8 },
+  { month: "Jan", predicted: 12 }, { month: "Feb", predicted: 14 }, { month: "Mar", predicted: 15 },
+  { month: "Apr", predicted: 16 }, { month: "May", predicted: 18 }, { month: "Jun", predicted: 18 },
+];
+
+export const engagementTrend = [
+  { name: "Logins", value: 85 }, { name: "Features", value: 62 }, { name: "Support", value: 24 }
+];
+
+export const recentAlerts = [
+  { customer: "John Lee", risk: "High Risk", issue: "Payment Failed" },
+  { customer: "Amy Tan", risk: "Inactive", issue: "No login for 15 Days" },
+  { customer: "Tech Corp", risk: "Moderate Risk", issue: "Downgrade Request" }
 ];
 
 export const segments = [
-  { name: "VIP", value: 215 },
-  { name: "Loyal", value: 540 },
-  { name: "New", value: 124 },
-  { name: "At Risk", value: 290 },
-  { name: "Inactive", value: 79 },
+  { name: "VIP", value: 215 }, { name: "Loyal", value: 540 }, { name: "New", value: 124 },
+  { name: "At Risk", value: 290 }, { name: "Inactive", value: 79 },
+];
+
+export const tasks = [
+  { customer: "Amy Tan", task: "Schedule Success Call", due: "Tomorrow", status: "Pending" },
+  { customer: "John Lee", task: "Offer 20% Discount", due: "Today", status: "Completed" },
+  { customer: "Michael Cho", task: "Send Renewal Reminder", due: "In 3 Days", status: "Pending" }
 ];
