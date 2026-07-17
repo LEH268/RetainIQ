@@ -17,7 +17,7 @@ app.add_middleware(
 
 # Configure your Gemini API Key
 # Replace "YOUR_FREE_GEMINI_API_KEY" with your actual key from Google AI Studio
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY", "AQ.Ab8RN6KE01BtajiqpB87zhwefswzLnuX22Q8_11RSNeKiQXB3w"))
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY", "YOUR_FREE_GEMINI_API_KEY"))
 
 # Mock database of raw customer metrics 
 MOCK_DATABASE = {
