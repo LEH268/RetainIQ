@@ -1,80 +1,52 @@
 import { useState } from "react"; 
 import { Link, useNavigate } from "react-router-dom"; 
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth"; 
+import { createUserWithEmailAndPassword } from "firebase/auth"; 
 import { auth } from "../lib/firebase"; 
 
-function loginErrorMessage(err) {   
+function registerErrorMessage(err) {   
   switch (err?.code) {     
+    case "auth/email-already-in-use":       
+      return "An account with this email already exists.";     
     case "auth/invalid-email":       
       return "That email address doesn't look right.";     
-    case "auth/user-disabled":       
-      return "This account has been disabled. Contact your administrator.";     
-    case "auth/user-not-found":     
-    case "auth/wrong-password":     
-    case "auth/invalid-credential":       
-      return "Incorrect email or password.";     
-    case "auth/too-many-requests":       
-      return "Too many attempts. Please wait a moment and try again.";     
+    case "auth/weak-password":       
+      return "Password should be at least 6 characters.";     
     default:       
-      return "Couldn't sign you in. Check your email and password and try again.";   
+      return "Couldn't create your account. Please try again.";   
   }
 }
 
-function resetErrorMessage(err) {   
-  switch (err?.code) {     
-    case "auth/invalid-email":       
-      return "Enter a valid email address first.";     
-    case "auth/user-not-found":       
-      return "If an account exists for that email, a reset link has been sent.";     
-    default:       
-      return "Couldn't send the reset email. Please try again.";   
-  }
-}
-
-export default function Login() {   
+export default function Register() {   
   const [email, setEmail] = useState("");   
   const [password, setPassword] = useState("");   
+  const [confirmPassword, setConfirmPassword] = useState("");   
   const [error, setError] = useState("");   
-  const [resetStatus, setResetStatus] = useState("");   
   const [loading, setLoading] = useState(false);   
   const navigate = useNavigate();   
 
   async function handleSubmit(e) {     
     e.preventDefault();     
     setError("");     
-    setResetStatus("");     
-    setLoading(true);     
-    try {       
-      await signInWithEmailAndPassword(auth, email, password);       
-      navigate("/");     
-    } catch (err) {       
-      setError(loginErrorMessage(err));     
-    } finally {       
-      setLoading(false);     
-    }   
-  }
-
-  async function handleForgotPassword(e) {     
-    e.preventDefault();     
-    setError("");     
-    setResetStatus("");     
-    if (!email) {       
-      setError("Enter your email above, then click \"Reset it\".");       
+    if (password !== confirmPassword) {       
+      setError("Passwords don't match.");       
       return;     
     }     
+    setLoading(true);     
     try {       
-      await sendPasswordResetEmail(auth, email);       
-      setResetStatus("Password reset email sent – check your inbox.");     
+      await createUserWithEmailAndPassword(auth, email, password);       
+      navigate("/");     
     } catch (err) {       
-      setError(resetErrorMessage(err));     
+      setError(registerErrorMessage(err));     
+    } finally {       
+      setLoading(false);     
     }   
   }
 
   return (     
     <div className="flex min-h-screen items-center justify-center bg-[var(--color-canvas)] px-4">       
       <div className="w-full max-w-sm rounded-2xl border border-[var(--color-border)] bg-[var(--color-panel)] p-8 shadow-sm">         
-        <h1 className="font-display text-2xl font-semibold">RetainIQ</h1>         
-        <p className="mt-1 text-sm text-ink/60">Sign in to monitor customer health and churn risk.</p>         
+        <h1 className="font-display text-2xl font-semibold">Create your account</h1>         
+        <p className="mt-1 text-sm text-ink/60">Get started monitoring customer health and churn risk.</p>         
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">           
           <div>             
             <label htmlFor="email" className="mb-1 block text-sm font-medium">Email</label>             
@@ -95,31 +67,38 @@ export default function Login() {
               id="password"               
               type="password"               
               required               
-              autoComplete="current-password"               
+              minLength={6}               
+              autoComplete="new-password"               
               value={password}               
               onChange={(e) => setPassword(e.target.value)}               
+              className="w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--color-brand)]"               
+              placeholder="At least 6 characters"             
+            />           
+          </div>           
+          <div>             
+            <label htmlFor="confirm-password" className="mb-1 block text-sm font-medium">Confirm password</label>             
+            <input               
+              id="confirm-password"               
+              type="password"               
+              required               
+              autoComplete="new-password"               
+              value={confirmPassword}               
+              onChange={(e) => setConfirmPassword(e.target.value)}               
               className="w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--color-brand)]"               
               placeholder="••••••••"             
             />           
           </div>           
           {error && <p className="text-sm text-[var(--color-risk-high)]" role="alert">{error}</p>}           
-          {resetStatus && <p className="text-sm text-[var(--color-risk-low)]" role="status">{resetStatus}</p>}           
           <button             
             type="submit"             
             disabled={loading}             
             className="mt-2 rounded-lg bg-[var(--color-brand)] py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"           
           >             
-            {loading ? "Signing in..." : "Sign in"}           
+            {loading ? "Creating account..." : "Create account"}           
           </button>         
         </form>         
         <p className="mt-4 text-center text-sm text-ink/60">           
-          Forgot your password?{" "}           
-          <button type="button" onClick={handleForgotPassword} className="text-[var(--color-brand)] hover:underline">             
-            Reset it           
-          </button>         
-        </p>         
-        <p className="mt-2 text-center text-sm text-ink/60">           
-          New here? <Link to="/register" className="text-[var(--color-brand)] hover:underline">Create an account</Link>         
+          Already have an account? <Link to="/login" className="text-[var(--color-brand)] hover:underline">Sign in</Link>         
         </p>       
       </div>     
     </div>   

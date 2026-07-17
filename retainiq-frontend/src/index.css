@@ -1,25 +1,45 @@
-@import "tailwindcss";
+@import "tailwindcss";  
 
-@theme {
-  --color-ink: #0F1B1A;
-  --color-canvas: #F6F7F5;
-  --color-panel: #FFFFFF;
-  --color-brand: #12796B;
-  --color-brand-soft: #E4F2EF;
-  --color-risk-high: #C4432B;
-  --color-risk-mid: #C98A1E;
-  --color-risk-low: #2E8B57;
-  --color-border: #E4E7E2;
-  --font-display: "Space Grotesk", "Inter", sans-serif;
-  --font-body: "Inter", system-ui, sans-serif;
+@theme {      
+  --color-ink: #0F172A;      
+  --color-canvas: #F8FAFC;      
+  --color-panel: #FFFFFF;      
+  --color-brand: #0284C7; /* Vibrant Blue */
+  --color-brand-soft: #E0F2FE;      
+  --color-brand-dark: #0369A1;
+  --color-accent: #8B5CF6; /* Violet for AI features */
+  --color-accent-soft: #EDE9FE;
+  --color-risk-high: #E11D48; /* Rose */
+  --color-risk-mid: #F59E0B; /* Amber */
+  --color-risk-low: #10B981; /* Emerald */
+  --color-border: #E2E8F0;      
+  --font-display: "Space Grotesk", "Inter", sans-serif;      
+  --font-body: "Inter", system-ui, sans-serif;  
 }
 
-body {
-  background-color: var(--color-canvas);
-  color: var(--color-ink);
-  font-family: var(--font-body);
+body {      
+  background-color: var(--color-canvas);      
+  color: var(--color-ink);      
+  font-family: var(--font-body);  
+  -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, h4 {
-  font-family: var(--font-display);
+h1, h2, h3, h4 {      
+  font-family: var(--font-display);  
+}
+
+/* Custom Scrollbar for a polished look */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
 }
