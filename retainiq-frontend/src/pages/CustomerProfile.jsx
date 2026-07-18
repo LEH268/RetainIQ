@@ -17,21 +17,21 @@ export default function CustomerProfile() {
   const [simulationOptions, setSimulationOptions] = useState([]);
 
   useEffect(() => {
-    api.get(`/customer/${id}`).then(res => {
-      setCustomer(mapCustomer(res.data));
-      // Try to fetch AI simulation options specifically for this user
-      api.get(`/api/ai/simulate-options/${id}`).then(simRes => {
-          setSimulationOptions(simRes.data.options || []);
-      }).catch(() => {
-          // Graceful fallback empty state if endpoint isn't ready
-          setSimulationOptions([]);
+      api.get(`/api/customers/${id}`).then(res => {
+        setCustomer(mapCustomer(res.data));
+        // Try to fetch AI simulation options specifically for this user
+        api.get(`/api/ai/simulate-options/${id}`).then(simRes => {
+            setSimulationOptions(simRes.data.options || []);
+        }).catch(() => {
+            // Graceful fallback empty state if endpoint isn't ready
+            setSimulationOptions([]);
+        });
+        setLoading(false);
+      }).catch(err => {
+        console.error(err);
+        setLoading(false);
       });
-      setLoading(false);
-    }).catch(err => {
-      console.error(err);
-      setLoading(false);
-    });
-  }, [id]);
+    }, [id]);
 
   const handleSimulate = async (action) => {
     setSelectedAction(action.name);

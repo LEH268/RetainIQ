@@ -16,14 +16,14 @@ export default function Customers() {
   const [segmentFilter, setSegmentFilter] = useState(searchParams.get("segment") || "All");
 
   useEffect(() => {
-    api.get("/customers").then(res => {
-      setCustomers(res.data.map(mapCustomer));
-      setLoading(false);
-    }).catch(err => {
-      console.error(err);
-      setLoading(false);
-    });
-  }, []);
+      api.get("/api/customers").then(res => {
+        setCustomers(res.data.map(mapCustomer));
+        setLoading(false);
+      }).catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+    }, []);
 
   const updateFilters = (key, value) => {
     const newParams = new URLSearchParams(searchParams);
