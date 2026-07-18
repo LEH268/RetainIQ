@@ -22,7 +22,7 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATASET_PATH = os.path.normpath(
-    os.path.join(BASE_DIR, "..", "..", "dataset", "customer_segment.csv")
+    os.path.join(BASE_DIR, "..","dataset", "customer_data_clean.csv")
 )
 
 CATEGORICAL_FEATURES = [
