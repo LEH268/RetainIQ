@@ -1,76 +1,82 @@
+import { useState, useEffect } from "react";
+import { Save, BrainCircuit, Bell, User, Key } from "lucide-react";
+import api from "../lib/api";
+
 export default function Settings() {
+  const [isSaving, setIsSaving] = useState(false);
+  const [settings, setSettings] = useState({ name: "", role: "", company: "" });
+
+  useEffect(() => {
+     api.get('/api/settings').then(res => setSettings(res.data)).catch(console.error);
+  }, []);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+        await api.post('/api/settings', settings);
+        alert("Settings saved to backend!");
+    } catch(e) {
+        alert("Failed to save settings");
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-10">
-      <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
-        <h1 className="font-display text-3xl font-bold">Platform Settings</h1>
-        <p className="text-sm text-ink/60 mt-1 font-medium">Manage preferences, company details, and API integrations.</p>
+      <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-bold">Platform Settings</h1>
+          <p className="text-sm text-ink/60 mt-1 font-medium">Manage preferences, company details, and AI API integrations.</p>
+        </div>
       </div>
 
-      <div className="bg-white p-8 rounded-2xl border border-[var(--color-border)] shadow-sm space-y-8">
-        
-        {/* Profile & Role */}
+      <div className="bg-white p-8 rounded-2xl border border-[var(--color-border)] shadow-sm space-y-10">
         <section>
-          <h2 className="text-xl font-bold font-display mb-6 border-b border-gray-100 pb-4">Profile & Role</h2>
-          <div className="grid grid-cols-2 gap-6">
+          <h2 className="text-xl font-bold font-display mb-6 border-b border-gray-100 pb-4 flex items-center gap-2">
+            <User size={20} className="text-[var(--color-brand)]" /> Profile & Role
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-bold text-ink mb-2">Full Name</label>
-              <input type="text" defaultValue="John Lee" className="w-full rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium outline-none focus:border-[var(--color-brand)]" />
+              <input type="text" value={settings.name || ""} onChange={(e) => setSettings({...settings, name: e.target.value})} className="w-full rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium outline-none focus:border-[var(--color-brand)]" />
             </div>
             <div>
-              <label className="block text-sm font-bold text-ink mb-2">Role (Admin Only)</label>
-              <select className="w-full rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium outline-none focus:border-[var(--color-brand)]">
-                <option>Customer Success Manager</option>
-                <option>Sales Manager</option>
-                <option>Admin</option>
-              </select>
+              <label className="block text-sm font-bold text-ink mb-2">Role</label>
+              <input type="text" value={settings.role || ""} onChange={(e) => setSettings({...settings, role: e.target.value})} className="w-full rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium outline-none focus:border-[var(--color-brand)]" />
             </div>
             <div>
               <label className="block text-sm font-bold text-ink mb-2">Company Name</label>
-              <input type="text" defaultValue="Tech Corp Inc." className="w-full rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium outline-none focus:border-[var(--color-brand)]" />
+              <input type="text" value={settings.company || ""} onChange={(e) => setSettings({...settings, company: e.target.value})} className="w-full rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium outline-none focus:border-[var(--color-brand)]" />
             </div>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-bold font-display mb-6 border-b border-gray-100 pb-4 flex items-center gap-2">
+            <BrainCircuit size={20} className="text-amber-500" /> AI Engine Configuration
+          </h2>
+          <div className="space-y-6">
             <div>
-              <label className="block text-sm font-bold text-ink mb-2">Language</label>
-              <select className="w-full rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium outline-none focus:border-[var(--color-brand)]">
-                <option>English</option>
-                <option>Mandarin</option>
-              </select>
+              <label className="block text-sm font-bold text-ink mb-2 flex items-center gap-2">
+                <Key size={16} className="text-ink/60"/> External AI Model Key (Optional)
+              </label>
+              <input type="password" placeholder="Configured via Backend environment variables..." disabled className="w-full rounded-xl border-2 border-gray-200 bg-gray-100 px-4 py-2.5 text-sm font-medium outline-none font-mono" />
+              <p className="text-xs text-ink/50 font-bold mt-1.5">This application relies on the FastAPI backend for AI calls.</p>
             </div>
-          </div>
-        </section>
-
-        {/* Preferences */}
-        <section>
-          <h2 className="text-xl font-bold font-display mb-6 border-b border-gray-100 pb-4">System Preferences</h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-200">
-              <div>
-                <p className="font-bold text-sm">Dark Theme</p>
-                <p className="text-xs font-medium text-ink/60">Toggle dark mode for the entire dashboard.</p>
-              </div>
-              <input type="checkbox" className="w-5 h-5 rounded text-[var(--color-brand)]" />
-            </div>
-            <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-200">
-              <div>
-                <p className="font-bold text-sm">Email Notifications</p>
-                <p className="text-xs font-medium text-ink/60">Receive daily AI churn risk summaries.</p>
-              </div>
-              <input type="checkbox" defaultChecked className="w-5 h-5 rounded text-[var(--color-brand)]" />
-            </div>
-          </div>
-        </section>
-
-        {/* Advanced API */}
-        <section>
-          <h2 className="text-xl font-bold font-display mb-6 border-b border-gray-100 pb-4">API Configuration</h2>
-          <div>
-            <label className="block text-sm font-bold text-ink mb-2">Gemini API Key (Future Feature)</label>
-            <input type="password" defaultValue="********" className="w-full rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium outline-none focus:border-[var(--color-brand)]" />
           </div>
         </section>
 
         <div className="mt-8 pt-6 border-t border-gray-100 flex justify-end gap-3">
           <button className="px-6 py-2.5 rounded-xl font-bold text-ink/70 hover:bg-gray-100 transition-colors">Cancel</button>
-          <button className="px-6 py-2.5 rounded-xl font-bold bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-dark)] shadow-sm transition-colors">Save Settings</button>
+          <button 
+            onClick={handleSave}
+            disabled={isSaving}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold bg-[var(--color-ink)] text-white hover:bg-opacity-90 shadow-sm transition-colors"
+          >
+            <Save size={18} />
+            {isSaving ? "Saving to Database..." : "Save Settings"}
+          </button>
         </div>
       </div>
     </div>
