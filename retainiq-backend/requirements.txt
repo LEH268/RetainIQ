@@ -3,9 +3,5 @@ uvicorn
 pandas
 numpy
 scikit-learn
-xgboost
-joblib
-matplotlib
-seaborn
 anthropic
 python-dotenv
