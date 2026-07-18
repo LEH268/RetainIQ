@@ -34,6 +34,7 @@ export default function Analytics() {
               </button>
             ))}
           </div>
+          
           <button 
             onClick={() => setIsComparing(!isComparing)}
             className={`flex items-center gap-2 rounded-xl border-2 px-4 py-1.5 text-sm font-bold transition-all ${isComparing ? 'bg-[var(--color-brand-soft)] border-[var(--color-brand)] text-[var(--color-brand-dark)]' : 'bg-white border-[var(--color-border)] hover:border-[var(--color-brand)] hover:text-[var(--color-brand)]'}`}
@@ -41,6 +42,7 @@ export default function Analytics() {
             <Calendar size={16} />
             {isComparing ? "Comparing: 2025 vs 2026" : "Compare (2025 vs 2026)"}
           </button>
+          
           <button className="flex items-center gap-2 rounded-xl bg-[var(--color-ink)] text-white px-4 py-2 text-sm font-bold shadow-sm hover:bg-opacity-90 transition-all">
             <Download size={16} /> Export
           </button>
@@ -72,23 +74,32 @@ export default function Analytics() {
                   <stop offset="5%" stopColor="var(--color-brand)" stopOpacity={0.3}/>
                   <stop offset="95%" stopColor="var(--color-brand)" stopOpacity={0}/>
                 </linearGradient>
+                <linearGradient id="colorPrevUsers" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#94A3B8" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#94A3B8" stopOpacity={0}/>
+                </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false} />
               <YAxis fontSize={12} tickLine={false} axisLine={false} />
               <Tooltip cursor={{ stroke: 'var(--color-border)' }} />
+              
               <Area type="monotone" name="Current Year" dataKey="users" stroke="var(--color-brand)" fillOpacity={1} fill="url(#colorUsers)" strokeWidth={3} />
+              
+              {isComparing && (
+                <Area type="monotone" name="Previous Year" dataKey="previousYearUsers" stroke="#94A3B8" fillOpacity={1} fill="url(#colorPrevUsers)" strokeWidth={2} strokeDasharray="5 5" />
+              )}
             </AreaChart>
           </ResponsiveContainer>
         </div>
-
+        
         <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
           <h3 className="mb-6 text-lg font-bold font-display">Revenue Trend ({timeframe})</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val/1000}k`} />
+              <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `RM${val/1000}k`} />
               <Tooltip cursor={{ fill: 'var(--color-brand-soft)' }} />
               <Bar dataKey="revenue" name="Revenue" fill="var(--color-brand)" radius={[4, 4, 0, 0]} barSize={40} />
             </BarChart>

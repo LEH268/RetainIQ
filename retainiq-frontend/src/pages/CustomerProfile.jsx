@@ -10,14 +10,10 @@ export default function CustomerProfile() {
   const [customer, setCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isSimulating, setIsSimulating] = useState(false);
-
   const [selectedAction, setSelectedAction] = useState(null);
   const [simulatedChurn, setSimulatedChurn] = useState(null);
   const [simulationOptions, setSimulationOptions] = useState([]);
-
-  // Explainable AI Insights — fetched live from a real LLM call, not
-  // pre-baked template text. Loaded separately from the customer record
-  // itself since it's a slower, on-demand generation step.
+  
   const [insights, setInsights] = useState([]);
   const [insightsLoading, setInsightsLoading] = useState(true);
   const [insightsError, setInsightsError] = useState("");
@@ -25,11 +21,13 @@ export default function CustomerProfile() {
   useEffect(() => {
       api.get(`/api/customers/${id}`).then(res => {
         setCustomer(mapCustomer(res.data));
+        
         api.get(`/api/ai/simulate-options/${id}`).then(simRes => {
             setSimulationOptions(simRes.data.options || []);
         }).catch(() => {
             setSimulationOptions([]);
         });
+        
         setLoading(false);
       }).catch(err => {
         console.error(err);
@@ -44,8 +42,8 @@ export default function CustomerProfile() {
       .then(res => setInsights(res.data.insights || []))
       .catch(err => {
         setInsightsError(
-          err.response?.status === 503
-            ? "AI service isn't configured on the backend (missing ANTHROPIC_API_KEY)."
+          err.response?.status === 503 
+            ? "AI service isn't configured on the backend (missing ANTHROPIC_API_KEY)." 
             : "Failed to generate AI insights. Check the backend logs."
         );
       })
@@ -67,8 +65,11 @@ export default function CustomerProfile() {
 
   const handleApplyAction = async () => {
     try {
-        await api.post('/api/tasks', { customerId: id, task: selectedAction || customer?.recommendation?.action });
-        alert(`Action applied and saved to Task Center!`);
+        await api.post(`/api/recommendations/${id}/action`, { 
+            type: 'apply',
+            action: selectedAction || customer?.recommendation?.action 
+        });
+        alert(`Action triggered successfully for ${customer.name}!`);
     } catch (e) {
         alert("Failed to apply action.");
     }
@@ -105,11 +106,10 @@ export default function CustomerProfile() {
           <p className="text-sm text-ink/60 font-medium mt-1">{customer.company} • {customer.email}</p>
         </div>
         <div className="flex gap-4 items-center">
-          <span className="text-sm font-bold bg-gray-100 px-3 py-1 rounded-lg text-gray-700 shadow-sm">{customer.plan} Plan</span>
+          <span className="text-sm font-bold bg-gray-100 px-3 py-1 rounded-lg text-gray-700 shadow-sm">{customer.plan}</span>
         </div>
       </div>
 
-      {/* Profile & listening details */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
           <div className="flex items-center gap-2 mb-4">
@@ -123,7 +123,6 @@ export default function CustomerProfile() {
             <div className="flex justify-between"><dt className="text-ink/50 font-medium">Account Tenure</dt><dd className="font-bold">{customer.usageTenure}</dd></div>
           </dl>
         </div>
-
         <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Music size={18} className="text-[var(--color-brand)]" />
@@ -136,7 +135,6 @@ export default function CustomerProfile() {
             <div className="flex justify-between"><dt className="text-ink/50 font-medium">Recommendation Rating</dt><dd className="font-bold">{customer.recommendationRating != null ? `${customer.recommendationRating}/5` : "N/A"}</dd></div>
           </dl>
         </div>
-
         <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Headphones size={18} className="text-[var(--color-brand)]" />
@@ -157,8 +155,8 @@ export default function CustomerProfile() {
             <div className={`w-32 h-32 mx-auto rounded-full border-8 flex items-center justify-center mb-4 ${customer.healthScore > 60 ? 'border-emerald-500 text-emerald-600' : 'border-rose-500 text-rose-600'}`}>
               <span className="text-4xl font-display font-bold">{customer.healthScore}</span>
             </div>
-            <p className={`text-sm font-bold inline-block px-3 py-1 rounded-lg mb-4 ${customer.healthScore > 60 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'}`}>
-               {customer.healthScore > 60 ? 'Healthy' : 'Poor'}
+            <p className={`text-sm font-bold inline-block px-3 py-1 rounded-lg mb-4 ${customer.healthScore > 60 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'}`}> 
+              {customer.healthScore > 60 ? 'Healthy' : 'Poor'}
             </p>
           </div>
 
@@ -179,17 +177,14 @@ export default function CustomerProfile() {
             <h2 className="text-lg font-bold font-display mb-4 flex items-center gap-2">
               <Brain className="text-[var(--color-accent)]"/> Explainable AI Insights
             </h2>
-
             {insightsLoading && (
               <div className="flex items-center gap-2 text-sm font-bold text-ink/50 py-4">
                 <Loader2 size={16} className="animate-spin" /> AI is analyzing this customer...
               </div>
             )}
-
             {!insightsLoading && insightsError && (
               <p className="text-sm font-bold text-rose-600 bg-rose-50 p-3 rounded-xl">{insightsError}</p>
             )}
-
             {!insightsLoading && !insightsError && (
               <ul className="space-y-3">
                 {insights.length > 0 ? insights.map((analysis, index) => (
@@ -238,8 +233,8 @@ export default function CustomerProfile() {
                   onClick={() => handleSimulate(action)}
                   className={`w-full flex items-center justify-between p-3 border-2 rounded-xl text-sm font-bold transition-all ${
                     selectedAction === action.name 
-                    ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)] text-[var(--color-brand-dark)]' 
-                    : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'
+                     ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)] text-[var(--color-brand-dark)]' 
+                     : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'
                   }`}
                 >
                   {action.name}

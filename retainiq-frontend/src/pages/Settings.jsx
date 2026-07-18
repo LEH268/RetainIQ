@@ -33,7 +33,6 @@ export default function Settings() {
   };
 
   const handleCancel = () => {
-    // Discard unsaved edits and revert to the last known-saved values.
     setSettings(savedSettings);
   };
 

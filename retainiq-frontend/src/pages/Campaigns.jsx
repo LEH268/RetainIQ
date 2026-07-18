@@ -9,7 +9,7 @@ export default function Campaigns() {
   const [prompt, setPrompt] = useState("Offer a free 1-on-1 onboarding session to help them use the new API features.");
   const [campaigns, setCampaigns] = useState([]);
   const [emailError, setEmailError] = useState("");
-
+  
   const [showNewCampaign, setShowNewCampaign] = useState(false);
   const [newCampaignForm, setNewCampaignForm] = useState({ name: "", target: "" });
   const [creatingCampaign, setCreatingCampaign] = useState(false);
@@ -22,14 +22,13 @@ export default function Campaigns() {
     setIsGenerating(true);
     setGeneratedEmail("");
     setEmailError("");
-
     try {
         const res = await api.post('/api/ai/generate-email', { segment, prompt });
         setGeneratedEmail(res.data.emailDraft);
     } catch (err) {
         setEmailError(
-          err.response?.status === 503
-            ? "AI service isn't configured on the backend (missing ANTHROPIC_API_KEY)."
+          err.response?.status === 503 
+            ? "AI service isn't configured on the backend (missing ANTHROPIC_API_KEY)." 
             : "Failed to generate email. Check the backend logs."
         );
     } finally {
@@ -60,7 +59,7 @@ export default function Campaigns() {
           <h1 className="font-display text-3xl font-bold">Targeted Campaigns</h1>
           <p className="text-sm text-ink/60 mt-1 font-medium">Launch targeted engagements based on AI customer segmentation.</p>
         </div>
-        <button
+        <button 
           onClick={() => setShowNewCampaign(true)}
           className="flex items-center gap-2 rounded-xl bg-[var(--color-brand)] text-white px-5 py-2.5 text-sm font-bold hover:bg-[var(--color-brand-dark)] transition-all shadow-sm"
         >
@@ -92,7 +91,6 @@ export default function Campaigns() {
           </table>
         </div>
 
-        {/* AI Email Generator — calls the real backend LLM endpoint */}
         <div className="bg-white p-6 rounded-2xl border-2 border-[var(--color-brand)]/20 shadow-sm relative overflow-hidden">
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="text-[var(--color-brand)]" size={20} />

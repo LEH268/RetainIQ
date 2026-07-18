@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Target, ArrowRight, Settings2, Brain, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Target, ArrowRight, Brain, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import api from "../lib/api";
 
 export default function Recommendations() {
@@ -23,6 +23,7 @@ export default function Recommendations() {
     try {
         await api.post(`/api/recommendations/${id}/action`, { type });
         setActionStatus(prev => ({ ...prev, [id]: type === 'apply' ? 'Applied Successfully' : 'Rejected' }));
+        
         setTimeout(() => {
           setRecs(prev => prev.filter(r => r.id !== id));
         }, 1000);
@@ -54,7 +55,7 @@ export default function Recommendations() {
         ) : (
           recs.map((rec) => (
             <div key={rec.id} className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6 hover:shadow-md transition-shadow relative overflow-hidden">
-              
+               
               {actionStatus[rec.id] && (
                 <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-10 flex items-center justify-center">
                   <div className={`font-bold text-lg flex items-center gap-2 ${actionStatus[rec.id].includes('Apply') ? 'text-emerald-600' : 'text-gray-500'}`}>
@@ -87,7 +88,7 @@ export default function Recommendations() {
                   <p><strong>AI Rationale:</strong> {rec.reason}</p>
                 </div>
               </div>
-              
+               
               <div className="flex flex-col gap-4 w-full md:w-auto md:min-w-[200px]">
                 <div className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
                   <span className="text-xs font-bold text-ink/60">Priority</span>

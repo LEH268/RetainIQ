@@ -11,27 +11,22 @@ export default function Customers() {
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState("");
+  
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
-  // Read filters directly from the URL on every render instead of
-  // mirroring them into separate useState. Previously the dropdowns
-  // wrote to searchParams but the filtering logic read from stale
-  // local state that only initialized once on mount — so selecting a
-  // filter (or navigating here from a Dashboard/Segmentation link)
-  // silently did nothing. searchParams is now the single source of
-  // truth, so it's always in sync with what's on screen.
   const statusFilter = searchParams.get("status") || "All";
   const riskFilter = searchParams.get("risk") || "All";
   const segmentFilter = searchParams.get("segment") || "All";
 
   useEffect(() => {
-      api.get("/api/customers").then(res => {
-        setCustomers(res.data.map(mapCustomer));
-        setLoading(false);
-      }).catch(err => {
-        console.error(err);
-        setLoading(false);
-      });
-    }, []);
+    api.get("/api/customers").then(res => {
+      setCustomers(res.data.map(mapCustomer));
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, []);
 
   const updateFilters = (key, value) => {
     const newParams = new URLSearchParams(searchParams);
@@ -42,20 +37,35 @@ export default function Customers() {
     }
     setSearchParams(newParams);
   };
+  
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
+    setSortConfig({ key, direction });
+  };
 
   const filtered = useMemo(() => {
-    return customers.filter((c) => {
-      const matchesQuery = query === "" ||
-        c.name.toLowerCase().includes(query.toLowerCase()) ||
+    let result = customers.filter((c) => {
+      const matchesQuery = query === "" || 
+        c.name.toLowerCase().includes(query.toLowerCase()) || 
         c.company.toLowerCase().includes(query.toLowerCase());
-
       const matchesStatus = statusFilter === "All" || c.status === statusFilter;
       const matchesRisk = riskFilter === "All" || c.risk === riskFilter;
       const matchesSegment = segmentFilter === "All" || c.segment === segmentFilter;
-
+      
       return matchesQuery && matchesStatus && matchesRisk && matchesSegment;
     });
-  }, [query, statusFilter, riskFilter, segmentFilter, customers]);
+
+    if (sortConfig.key) {
+        result.sort((a, b) => {
+            if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    return result;
+  }, [query, statusFilter, riskFilter, segmentFilter, customers, sortConfig]);
 
   const handleExport = () => {
     const exportData = filtered.map(c => ({
@@ -73,6 +83,7 @@ export default function Customers() {
             <h1 className="font-display text-3xl font-bold">Customers AI Directory</h1>
             <p className="text-sm font-medium text-ink/60 mt-1">Filter cohorts, review health scores, and simulate AI retention strategies.</p>
           </div>
+          
           <div className="flex items-center gap-3">
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/40" />
@@ -93,17 +104,28 @@ export default function Customers() {
           <div className="flex items-center gap-2 text-sm font-bold text-ink/70">
             <Filter size={16} /> Filters:
           </div>
-
+          
           <select value={statusFilter} onChange={(e) => updateFilters("status", e.target.value)} className="rounded-lg border-2 border-[var(--color-border)] bg-white px-3 py-1.5 text-sm font-medium outline-none focus:border-[var(--color-brand)] cursor-pointer">
-            <option value="All">All Statuses</option> <option value="Active">Active</option> <option value="New">New</option> <option value="Cancelled">Cancelled</option>
+            <option value="All">All Statuses</option>
+            <option value="Active">Active</option>
+            <option value="New">New</option>
+            <option value="Cancelled">Cancelled</option>
           </select>
-
+          
           <select value={riskFilter} onChange={(e) => updateFilters("risk", e.target.value)} className="rounded-lg border-2 border-[var(--color-border)] bg-white px-3 py-1.5 text-sm font-medium outline-none focus:border-[var(--color-brand)] cursor-pointer">
-            <option value="All">All Risks</option> <option value="Healthy">Healthy</option> <option value="Moderate Risk">Moderate Risk</option> <option value="High Risk">High Risk</option>
+            <option value="All">All Risks</option>
+            <option value="Healthy">Healthy</option>
+            <option value="Moderate Risk">Moderate Risk</option>
+            <option value="High Risk">High Risk</option>
           </select>
-
+          
           <select value={segmentFilter} onChange={(e) => updateFilters("segment", e.target.value)} className="rounded-lg border-2 border-[var(--color-border)] bg-white px-3 py-1.5 text-sm font-medium outline-none focus:border-[var(--color-brand)] cursor-pointer">
-            <option value="All">All Segments</option> <option value="VIP">VIP</option> <option value="Loyal">Loyal</option> <option value="New">New</option> <option value="At Risk">At Risk</option> <option value="Inactive">Inactive</option>
+            <option value="All">All Segments</option>
+            <option value="VIP">VIP</option>
+            <option value="Loyal">Loyal</option>
+            <option value="New">New</option>
+            <option value="At Risk">At Risk</option>
+            <option value="Inactive">Inactive</option>
           </select>
 
           {(statusFilter !== "All" || riskFilter !== "All" || segmentFilter !== "All") && (
@@ -121,8 +143,12 @@ export default function Customers() {
               <th className="px-6 py-4">Customer</th>
               <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4">Segment</th>
-              <th className="px-6 py-4">Health Score</th>
-              <th className="px-6 py-4">Churn Prob.</th>
+              <th className="px-6 py-4 cursor-pointer hover:text-[var(--color-brand)]" onClick={() => handleSort('healthScore')}>
+                Health Score {sortConfig.key === 'healthScore' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+              </th>
+              <th className="px-6 py-4 cursor-pointer hover:text-[var(--color-brand)]" onClick={() => handleSort('churnProbability')}>
+                Churn Prob. {sortConfig.key === 'churnProbability' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+              </th>
               <th className="px-6 py-4">Risk Level</th>
               <th className="px-6 py-4 text-right">Action</th>
             </tr>

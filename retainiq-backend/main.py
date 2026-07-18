@@ -6,7 +6,6 @@ from api import (
     customers,
     analytics,
     reports,
-    tasks,
     campaigns,
     settings,
     recommendations,
@@ -28,13 +27,11 @@ app.include_router(dashboard.router, prefix="/api")
 app.include_router(customers.router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
 app.include_router(reports.router, prefix="/api")
-app.include_router(tasks.router, prefix="/api")
 app.include_router(campaigns.router, prefix="/api")
 app.include_router(settings.router, prefix="/api")
 app.include_router(recommendations.router, prefix="/api")
 app.include_router(segmentation.router, prefix="/api")
 app.include_router(ai.router, prefix="/api")
-
 
 @app.get("/")
 def home():

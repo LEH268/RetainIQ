@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Users, LogOut, Sparkles, PieChart, BarChart2, Target, CheckSquare, Layers, Settings, Megaphone } from "lucide-react";
+import { LayoutDashboard, Users, LogOut, Sparkles, PieChart, BarChart2, Target, Layers, Settings, Megaphone } from "lucide-react";
 
 const navItems = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -8,7 +8,6 @@ const navItems = [
     { to: "/segmentation", label: "Segmentation", icon: Layers },
     { to: "/analytics", label: "Analytics", icon: BarChart2 },
     { to: "/reports", label: "Reports", icon: PieChart },
-    { to: "/tasks", label: "Task Center", icon: CheckSquare },
     { to: "/campaigns", label: "Campaigns", icon: Megaphone },
     { to: "/settings", label: "Settings", icon: Settings },
 ];
@@ -33,6 +32,7 @@ export default function Sidebar({ onLogout }) {
                     ))}
                 </nav>
             </div>
+            
             <button onClick={onLogout} className="z-10 relative flex items-center gap-3 mt-8 rounded-xl px-4 py-3 text-sm font-medium text-white/60 hover:bg-red-500/20 hover:text-red-400 transition-all">
                 <LogOut size={18} /> Log out
             </button>

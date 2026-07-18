@@ -2,15 +2,16 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "./lib/firebase";
+
 import Sidebar from "./components/Sidebar";
 import AIChat from "./components/AIChat";
+
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
 import CustomerProfile from "./pages/CustomerProfile";
 import Recommendations from "./pages/Recommendations";
-import TaskCenter from "./pages/TaskCenter";
 import Segmentation from "./pages/Segmentation";
 import Analytics from "./pages/Analytics";
 import Reports from "./pages/Reports";
@@ -51,13 +52,13 @@ function FullScreenMessage({ children }) {
 
 export default function App() {
   const { user, loading } = useAuth();
-  
+
   async function handleLogout() {
     try { await signOut(auth); } catch (err) { console.error("Failed to sign out:", err); }
   }
 
   if (loading) return <FullScreenMessage>Loading RetainIQ...</FullScreenMessage>;
-  
+
   return (
     <BrowserRouter>
       <Routes>
@@ -67,7 +68,6 @@ export default function App() {
         <Route path="/customers" element={user ? <AppLayout onLogout={handleLogout}><Customers /></AppLayout> : <Navigate to="/login" replace />} />
         <Route path="/customers/:id" element={user ? <AppLayout onLogout={handleLogout}><CustomerProfile /></AppLayout> : <Navigate to="/login" replace />} />
         <Route path="/recommendations" element={user ? <AppLayout onLogout={handleLogout}><Recommendations /></AppLayout> : <Navigate to="/login" replace />} />
-        <Route path="/tasks" element={user ? <AppLayout onLogout={handleLogout}><TaskCenter /></AppLayout> : <Navigate to="/login" replace />} />
         <Route path="/segmentation" element={user ? <AppLayout onLogout={handleLogout}><Segmentation /></AppLayout> : <Navigate to="/login" replace />} />
         <Route path="/analytics" element={user ? <AppLayout onLogout={handleLogout}><Analytics /></AppLayout> : <Navigate to="/login" replace />} />
         <Route path="/reports" element={user ? <AppLayout onLogout={handleLogout}><Reports /></AppLayout> : <Navigate to="/login" replace />} />

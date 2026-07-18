@@ -12,20 +12,19 @@ export default function Reports() {
   const [reportData, setReportData] = useState(null);
   const [shareStatus, setShareStatus] = useState("");
   const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [reportPeriod, setReportPeriod] = useState("Monthly");
 
   useEffect(() => {
      api.get('/api/reports').then(res => setReportData(res.data)).catch(console.error);
   }, []);
 
-  // Builds a real downloadable file from the current report data (no
-  // PDF library is bundled in this project, so this exports a plain-text
-  // report; window.print() below covers true "Save as PDF").
   const handleExport = () => {
     if (!reportData) return;
     setIsExporting(true);
-
+    
     const lines = [
-      "RetainIQ — AI Analytics Report",
+      "RetainIQ - AI Analytics Report",
+      `Period: ${reportPeriod}`,
       `Generated: ${new Date().toLocaleString()}`,
       "",
       `Total Revenue At Risk: ${reportData.atRisk}`,
@@ -46,12 +45,12 @@ export default function Reports() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "retainiq-report.txt";
+    link.download = `retainiq-${reportPeriod.toLowerCase()}-report.txt`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-
+    
     setIsExporting(false);
     setExportSuccess(true);
     setTimeout(() => setExportSuccess(false), 3000);
@@ -65,14 +64,9 @@ export default function Reports() {
     };
 
     if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch (err) {
-        // user cancelled the share sheet — not an error
-      }
+      try { await navigator.share(shareData); } catch (err) {}
       return;
     }
-
     try {
       await navigator.clipboard.writeText(window.location.href);
       setShareStatus("Link copied!");
@@ -89,12 +83,8 @@ export default function Reports() {
       const res = await api.get("/api/customers");
       const customers = res.data.map(mapCustomer);
       const exportData = customers.map(c => ({
-        Customer_Name: c.name,
-        Segment: c.segment,
-        Health_Score: c.healthScore,
-        Churn_Probability: `${c.churnProbability}%`,
-        Risk: c.risk,
-        Status: c.status,
+        Customer_Name: c.name, Segment: c.segment, Health_Score: c.healthScore,
+        Churn_Probability: `${c.churnProbability}%`, Risk: c.risk, Status: c.status,
       }));
       downloadCSV(exportData, "retainiq-detailed-report.csv");
     } catch (err) {
@@ -113,8 +103,19 @@ export default function Reports() {
           <h1 className="font-display text-3xl font-bold">AI Analytics Reports</h1>
           <p className="text-sm text-ink/60 mt-1 font-medium">Generate, print, and export executive summaries.</p>
         </div>
+        
         <div className="flex items-center gap-3">
+          <select 
+            value={reportPeriod} 
+            onChange={(e) => setReportPeriod(e.target.value)}
+            className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold bg-gray-50 outline-none focus:border-[var(--color-brand)]"
+          >
+            <option value="Daily">Daily Report</option>
+            <option value="Monthly">Monthly Report</option>
+            <option value="Yearly">Yearly Report</option>
+          </select>
           <button onClick={() => window.print()} title="Print / Save as PDF" className="p-2.5 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"><Printer size={18}/></button>
+          
           <div className="relative">
             <button onClick={handleShare} title="Share report" className="p-2.5 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"><Share2 size={18}/></button>
             {shareStatus && (
@@ -159,7 +160,7 @@ export default function Reports() {
             </BarChart>
           </ResponsiveContainer>
         </div>
-
+        
         <div className="bg-gradient-to-br from-blue-50 to-[var(--color-brand-soft)] p-8 rounded-2xl border border-[var(--color-brand)]/20 shadow-sm flex flex-col justify-center relative overflow-hidden">
           <div className="absolute -top-10 -right-10 text-[var(--color-brand)]/10">
             <FileText size={160} />
