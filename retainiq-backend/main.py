@@ -17,7 +17,7 @@ app = FastAPI(title="RetainIQ API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173","https://retain-7ec9nnc42-leh268s-projects.vercel.app/customers"],
+    allow_origins=["http://localhost:5173","https://retain-kzbjnbupb-leh268s-projects.vercel.app/"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
