@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from data_processing.dataset_loader import get_customers
+from services.ai_client import generate_text, AIClientError
 
 router = APIRouter()
 
@@ -28,19 +29,53 @@ def reports():
         else:
             segments[seg]["savedRevenue"] += REVENUE_PER_CUSTOMER
 
+    summary_paragraph_1, summary_paragraph_2 = _generate_summary(
+        total, len(at_risk_customers), at_risk_revenue, saved_revenue, accuracy
+    )
+
     return {
         "atRisk": f"${at_risk_revenue:,}",
         "saved": f"${saved_revenue:,}",
         "accuracy": f"{accuracy}%",
         "chartData": list(segments.values()),
-        "summaryParagraph1": (
-            f"Out of {total} tracked customers, {len(at_risk_customers)} are flagged as "
-            f"moderate or high churn risk, representing an estimated ${at_risk_revenue:,} "
-            f"in at-risk revenue."
-        ),
-        "summaryParagraph2": (
-            f"AI-driven retention actions are projected to recover roughly "
-            f"${saved_revenue:,} of that revenue if applied consistently across the "
-            f"flagged segments."
-        ),
+        "summaryParagraph1": summary_paragraph_1,
+        "summaryParagraph2": summary_paragraph_2,
     }
+
+
+def _generate_summary(total, at_risk_count, at_risk_revenue, saved_revenue, accuracy):
+    system_prompt = (
+        "You are RetainIQ AI. Write exactly two short paragraphs (max 45 "
+        "words each) for an executive churn report, using only the "
+        "numbers given -- never invent figures. Paragraph 1: the at-risk "
+        "exposure. Paragraph 2: the recovery opportunity and one "
+        "recommended next step. Separate the two paragraphs with a blank "
+        "line. No markdown, no headers."
+    )
+    user_prompt = (
+        f"Total tracked customers: {total}\n"
+        f"At-risk customers: {at_risk_count}\n"
+        f"Estimated at-risk revenue: ${at_risk_revenue:,}\n"
+        f"Estimated recoverable revenue: ${saved_revenue:,}\n"
+        f"Model prediction accuracy: {accuracy}%"
+    )
+
+    try:
+        summary = generate_text(system_prompt, user_prompt, max_tokens=300)
+        paragraphs = [p.strip() for p in summary.split("\n\n") if p.strip()]
+        if len(paragraphs) >= 2:
+            return paragraphs[0], paragraphs[1]
+        if len(paragraphs) == 1:
+            return paragraphs[0], ""
+    except AIClientError:
+        pass
+
+    # AI service unreachable/unconfigured -- return a clearly non-AI
+    # fallback rather than pretending this text came from the model.
+    return (
+        f"[AI summary unavailable] {at_risk_count} of {total} tracked customers are "
+        f"flagged moderate or high churn risk, representing an estimated "
+        f"${at_risk_revenue:,} in at-risk revenue.",
+        f"[AI summary unavailable] Retention actions are projected to recover roughly "
+        f"${saved_revenue:,} of that revenue if applied consistently.",
+    )

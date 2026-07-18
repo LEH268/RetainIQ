@@ -11,9 +11,17 @@ export default function Customers() {
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "All");
-  const [riskFilter, setRiskFilter] = useState(searchParams.get("risk") || "All");
-  const [segmentFilter, setSegmentFilter] = useState(searchParams.get("segment") || "All");
+
+  // Read filters directly from the URL on every render instead of
+  // mirroring them into separate useState. Previously the dropdowns
+  // wrote to searchParams but the filtering logic read from stale
+  // local state that only initialized once on mount — so selecting a
+  // filter (or navigating here from a Dashboard/Segmentation link)
+  // silently did nothing. searchParams is now the single source of
+  // truth, so it's always in sync with what's on screen.
+  const statusFilter = searchParams.get("status") || "All";
+  const riskFilter = searchParams.get("risk") || "All";
+  const segmentFilter = searchParams.get("segment") || "All";
 
   useEffect(() => {
       api.get("/api/customers").then(res => {
@@ -37,10 +45,10 @@ export default function Customers() {
 
   const filtered = useMemo(() => {
     return customers.filter((c) => {
-      const matchesQuery = query === "" || 
+      const matchesQuery = query === "" ||
         c.name.toLowerCase().includes(query.toLowerCase()) ||
         c.company.toLowerCase().includes(query.toLowerCase());
-              
+
       const matchesStatus = statusFilter === "All" || c.status === statusFilter;
       const matchesRisk = riskFilter === "All" || c.risk === riskFilter;
       const matchesSegment = segmentFilter === "All" || c.segment === segmentFilter;
@@ -85,7 +93,7 @@ export default function Customers() {
           <div className="flex items-center gap-2 text-sm font-bold text-ink/70">
             <Filter size={16} /> Filters:
           </div>
-          
+
           <select value={statusFilter} onChange={(e) => updateFilters("status", e.target.value)} className="rounded-lg border-2 border-[var(--color-border)] bg-white px-3 py-1.5 text-sm font-medium outline-none focus:border-[var(--color-brand)] cursor-pointer">
             <option value="All">All Statuses</option> <option value="Active">Active</option> <option value="New">New</option> <option value="Cancelled">Cancelled</option>
           </select>
@@ -110,12 +118,12 @@ export default function Customers() {
         <table className="w-full text-sm text-left">
           <thead>
             <tr className="border-b border-[var(--color-border)] bg-gray-50 text-xs uppercase tracking-wider text-ink/50 font-bold">
-              <th className="px-6 py-4">Customer</th> 
-              <th className="px-6 py-4">Status</th> 
-              <th className="px-6 py-4">Segment</th> 
+              <th className="px-6 py-4">Customer</th>
+              <th className="px-6 py-4">Status</th>
+              <th className="px-6 py-4">Segment</th>
               <th className="px-6 py-4">Health Score</th>
-              <th className="px-6 py-4">Churn Prob.</th> 
-              <th className="px-6 py-4">Risk Level</th> 
+              <th className="px-6 py-4">Churn Prob.</th>
+              <th className="px-6 py-4">Risk Level</th>
               <th className="px-6 py-4 text-right">Action</th>
             </tr>
           </thead>

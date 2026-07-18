@@ -1,25 +1,40 @@
-import { useState, useEffect } from "react";
-import { Save, BrainCircuit, Bell, User, Key } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Save, BrainCircuit, User, Key } from "lucide-react";
 import api from "../lib/api";
 
 export default function Settings() {
   const [isSaving, setIsSaving] = useState(false);
   const [settings, setSettings] = useState({ name: "", role: "", company: "" });
+  const [savedSettings, setSavedSettings] = useState({ name: "", role: "", company: "" });
+
+  const loadSettings = useCallback(() => {
+    return api.get('/api/settings').then(res => {
+      setSettings(res.data);
+      setSavedSettings(res.data);
+    });
+  }, []);
 
   useEffect(() => {
-     api.get('/api/settings').then(res => setSettings(res.data)).catch(console.error);
-  }, []);
+    loadSettings().catch(console.error);
+  }, [loadSettings]);
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-        await api.post('/api/settings', settings);
+        const res = await api.post('/api/settings', settings);
+        setSettings(res.data);
+        setSavedSettings(res.data);
         alert("Settings saved to backend!");
     } catch(e) {
         alert("Failed to save settings");
     } finally {
         setIsSaving(false);
     }
+  };
+
+  const handleCancel = () => {
+    // Discard unsaved edits and revert to the last known-saved values.
+    setSettings(savedSettings);
   };
 
   return (
@@ -61,18 +76,18 @@ export default function Settings() {
               <label className="block text-sm font-bold text-ink mb-2 flex items-center gap-2">
                 <Key size={16} className="text-ink/60"/> External AI Model Key (Optional)
               </label>
-              <input type="password" placeholder="Configured via Backend environment variables..." disabled className="w-full rounded-xl border-2 border-gray-200 bg-gray-100 px-4 py-2.5 text-sm font-medium outline-none font-mono" />
-              <p className="text-xs text-ink/50 font-bold mt-1.5">This application relies on the FastAPI backend for AI calls.</p>
+              <input type="password" placeholder="Configured via Backend environment variables (ANTHROPIC_API_KEY)..." disabled className="w-full rounded-xl border-2 border-gray-200 bg-gray-100 px-4 py-2.5 text-sm font-medium outline-none font-mono" />
+              <p className="text-xs text-ink/50 font-bold mt-1.5">This application calls the Anthropic API from the FastAPI backend — set ANTHROPIC_API_KEY in retainiq-backend/.env.</p>
             </div>
           </div>
         </section>
 
         <div className="mt-8 pt-6 border-t border-gray-100 flex justify-end gap-3">
-          <button className="px-6 py-2.5 rounded-xl font-bold text-ink/70 hover:bg-gray-100 transition-colors">Cancel</button>
+          <button onClick={handleCancel} className="px-6 py-2.5 rounded-xl font-bold text-ink/70 hover:bg-gray-100 transition-colors">Cancel</button>
           <button 
             onClick={handleSave}
             disabled={isSaving}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold bg-[var(--color-ink)] text-white hover:bg-opacity-90 shadow-sm transition-colors"
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold bg-[var(--color-ink)] text-white hover:bg-opacity-90 shadow-sm transition-colors disabled:opacity-60"
           >
             <Save size={18} />
             {isSaving ? "Saving to Database..." : "Save Settings"}

@@ -1,6 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { ArrowLeft, Zap, CheckCircle2, History, AlertTriangle, Brain, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Zap, CheckCircle2, AlertTriangle, Brain, Sparkles, Loader2, User, Music, Headphones } from "lucide-react";
 import RiskBadge from "../components/RiskBadge";
 import api from "../lib/api";
 import { mapCustomer } from "../utils/dataMapper";
@@ -11,19 +11,23 @@ export default function CustomerProfile() {
   const [loading, setLoading] = useState(true);
   const [isSimulating, setIsSimulating] = useState(false);
 
-  // Simulator State
   const [selectedAction, setSelectedAction] = useState(null);
   const [simulatedChurn, setSimulatedChurn] = useState(null);
   const [simulationOptions, setSimulationOptions] = useState([]);
 
+  // Explainable AI Insights — fetched live from a real LLM call, not
+  // pre-baked template text. Loaded separately from the customer record
+  // itself since it's a slower, on-demand generation step.
+  const [insights, setInsights] = useState([]);
+  const [insightsLoading, setInsightsLoading] = useState(true);
+  const [insightsError, setInsightsError] = useState("");
+
   useEffect(() => {
       api.get(`/api/customers/${id}`).then(res => {
         setCustomer(mapCustomer(res.data));
-        // Try to fetch AI simulation options specifically for this user
         api.get(`/api/ai/simulate-options/${id}`).then(simRes => {
             setSimulationOptions(simRes.data.options || []);
         }).catch(() => {
-            // Graceful fallback empty state if endpoint isn't ready
             setSimulationOptions([]);
         });
         setLoading(false);
@@ -32,6 +36,21 @@ export default function CustomerProfile() {
         setLoading(false);
       });
     }, [id]);
+
+  useEffect(() => {
+    setInsightsLoading(true);
+    setInsightsError("");
+    api.get(`/api/ai/explain/${id}`)
+      .then(res => setInsights(res.data.insights || []))
+      .catch(err => {
+        setInsightsError(
+          err.response?.status === 503
+            ? "AI service isn't configured on the backend (missing ANTHROPIC_API_KEY)."
+            : "Failed to generate AI insights. Check the backend logs."
+        );
+      })
+      .finally(() => setInsightsLoading(false));
+  }, [id]);
 
   const handleSimulate = async (action) => {
     setSelectedAction(action.name);
@@ -86,9 +105,48 @@ export default function CustomerProfile() {
           <p className="text-sm text-ink/60 font-medium mt-1">{customer.company} • {customer.email}</p>
         </div>
         <div className="flex gap-4 items-center">
-          <div className="text-right">
-            <span className="text-sm font-bold bg-gray-100 px-3 py-1 rounded-lg text-gray-700 shadow-sm block mb-2">{customer.plan} Plan</span>
+          <span className="text-sm font-bold bg-gray-100 px-3 py-1 rounded-lg text-gray-700 shadow-sm">{customer.plan} Plan</span>
+        </div>
+      </div>
+
+      {/* Profile & listening details */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <User size={18} className="text-[var(--color-brand)]" />
+            <h3 className="font-bold font-display">Profile</h3>
           </div>
+          <dl className="space-y-2 text-sm">
+            <div className="flex justify-between"><dt className="text-ink/50 font-medium">Age Group</dt><dd className="font-bold">{customer.age}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink/50 font-medium">Gender</dt><dd className="font-bold">{customer.gender}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink/50 font-medium">Device</dt><dd className="font-bold">{customer.company}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink/50 font-medium">Account Tenure</dt><dd className="font-bold">{customer.usageTenure}</dd></div>
+          </dl>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <Music size={18} className="text-[var(--color-brand)]" />
+            <h3 className="font-bold font-display">Music Habits</h3>
+          </div>
+          <dl className="space-y-2 text-sm">
+            <div className="flex justify-between"><dt className="text-ink/50 font-medium">Favorite Genre</dt><dd className="font-bold">{customer.favGenre}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink/50 font-medium">Usual Listening Time</dt><dd className="font-bold">{customer.listeningTime}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink/50 font-medium">Listening Frequency</dt><dd className="font-bold">{customer.listeningFrequency}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink/50 font-medium">Recommendation Rating</dt><dd className="font-bold">{customer.recommendationRating != null ? `${customer.recommendationRating}/5` : "N/A"}</dd></div>
+          </dl>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <Headphones size={18} className="text-[var(--color-brand)]" />
+            <h3 className="font-bold font-display">Podcast Habits</h3>
+          </div>
+          <dl className="space-y-2 text-sm">
+            <div className="flex justify-between"><dt className="text-ink/50 font-medium">Listening Frequency</dt><dd className="font-bold">{customer.podcastFrequency}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink/50 font-medium">Favorite Genre</dt><dd className="font-bold">{customer.favPodGenre}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink/50 font-medium">Content Satisfaction</dt><dd className="font-bold">{customer.contentSatisfaction}</dd></div>
+          </dl>
         </div>
       </div>
 
@@ -118,17 +176,32 @@ export default function CustomerProfile() {
 
         <div className="flex flex-col gap-6">
           <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
-            <h2 className="text-lg font-bold font-display mb-4 flex items-center gap-2"><Brain className="text-[var(--color-accent)]"/> Explainable AI Insights</h2>
-            <ul className="space-y-3">
-              {customer.churnAnalysis && customer.churnAnalysis.length > 0 ? customer.churnAnalysis.map((analysis, index) => (
-                <li key={index} className="bg-gray-50 p-3 rounded-xl flex items-center gap-3 border border-gray-100">
-                  <span className={`${customer.risk === 'High Risk' ? 'text-rose-500' : 'text-[var(--color-brand)]'} font-bold`}>•</span>
-                  <span className="text-sm font-bold">{analysis}</span>
-                </li>
-              )) : (
-                 <p className="text-sm text-ink/50 italic">AI has not generated insights for this user yet.</p>
-              )}
-            </ul>
+            <h2 className="text-lg font-bold font-display mb-4 flex items-center gap-2">
+              <Brain className="text-[var(--color-accent)]"/> Explainable AI Insights
+            </h2>
+
+            {insightsLoading && (
+              <div className="flex items-center gap-2 text-sm font-bold text-ink/50 py-4">
+                <Loader2 size={16} className="animate-spin" /> AI is analyzing this customer...
+              </div>
+            )}
+
+            {!insightsLoading && insightsError && (
+              <p className="text-sm font-bold text-rose-600 bg-rose-50 p-3 rounded-xl">{insightsError}</p>
+            )}
+
+            {!insightsLoading && !insightsError && (
+              <ul className="space-y-3">
+                {insights.length > 0 ? insights.map((analysis, index) => (
+                  <li key={index} className="bg-gray-50 p-3 rounded-xl flex items-start gap-3 border border-gray-100">
+                    <span className={`${customer.risk === 'High Risk' ? 'text-rose-500' : 'text-[var(--color-brand)]'} font-bold mt-0.5`}>•</span>
+                    <span className="text-sm font-bold">{analysis}</span>
+                  </li>
+                )) : (
+                  <p className="text-sm text-ink/50 italic">No insights returned.</p>
+                )}
+              </ul>
+            )}
           </div>
         </div>
 

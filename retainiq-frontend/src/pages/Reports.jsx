@@ -1,25 +1,107 @@
 import { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts";
-import { Download, TrendingUp, Printer, Share2, FileText, CheckCircle2, Loader2 } from "lucide-react";
+import { Download, TrendingUp, Printer, Share2, FileText, CheckCircle2, Loader2, Link2 } from "lucide-react";
 import StatCard from "../components/StatCard";
 import api from "../lib/api";
+import { downloadCSV } from "../utils/exportCsv";
+import { mapCustomer } from "../utils/dataMapper";
 
 export default function Reports() {
   const [isExporting, setIsExporting] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
   const [reportData, setReportData] = useState(null);
+  const [shareStatus, setShareStatus] = useState("");
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
 
   useEffect(() => {
      api.get('/api/reports').then(res => setReportData(res.data)).catch(console.error);
   }, []);
 
+  // Builds a real downloadable file from the current report data (no
+  // PDF library is bundled in this project, so this exports a plain-text
+  // report; window.print() below covers true "Save as PDF").
   const handleExport = () => {
+    if (!reportData) return;
     setIsExporting(true);
-    setTimeout(() => {
-      setIsExporting(false);
-      setExportSuccess(true);
-      setTimeout(() => setExportSuccess(false), 3000);
-    }, 1500);
+
+    const lines = [
+      "RetainIQ — AI Analytics Report",
+      `Generated: ${new Date().toLocaleString()}`,
+      "",
+      `Total Revenue At Risk: ${reportData.atRisk}`,
+      `Revenue Saved by AI: ${reportData.saved}`,
+      `AI Prediction Accuracy: ${reportData.accuracy}`,
+      "",
+      "Executive AI Summary:",
+      reportData.summaryParagraph1,
+      reportData.summaryParagraph2,
+      "",
+      "Revenue Risk & Recovery by Segment:",
+      ...reportData.chartData.map(
+        (row) => `  ${row.segment}: at-risk $${row.atRiskRevenue}, saved $${row.savedRevenue}`
+      ),
+    ];
+
+    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "retainiq-report.txt";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setIsExporting(false);
+    setExportSuccess(true);
+    setTimeout(() => setExportSuccess(false), 3000);
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: "RetainIQ AI Analytics Report",
+      text: `RetainIQ report: ${reportData?.atRisk || ""} at risk, ${reportData?.saved || ""} saved by AI.`,
+      url: window.location.href,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        // user cancelled the share sheet — not an error
+      }
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setShareStatus("Link copied!");
+    } catch (err) {
+      setShareStatus("Couldn't copy link");
+    } finally {
+      setTimeout(() => setShareStatus(""), 2000);
+    }
+  };
+
+  const handleExcelExport = async () => {
+    setIsExportingExcel(true);
+    try {
+      const res = await api.get("/api/customers");
+      const customers = res.data.map(mapCustomer);
+      const exportData = customers.map(c => ({
+        Customer_Name: c.name,
+        Segment: c.segment,
+        Health_Score: c.healthScore,
+        Churn_Probability: `${c.churnProbability}%`,
+        Risk: c.risk,
+        Status: c.status,
+      }));
+      downloadCSV(exportData, "retainiq-detailed-report.csv");
+    } catch (err) {
+      alert("Failed to generate the detailed report. Check the backend logs.");
+    } finally {
+      setIsExportingExcel(false);
+    }
   };
 
   if(!reportData) return <div className="text-center p-20">Loading API Reports...</div>
@@ -32,8 +114,15 @@ export default function Reports() {
           <p className="text-sm text-ink/60 mt-1 font-medium">Generate, print, and export executive summaries.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => window.print()} className="p-2.5 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"><Printer size={18}/></button>
-          <button className="p-2.5 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"><Share2 size={18}/></button>
+          <button onClick={() => window.print()} title="Print / Save as PDF" className="p-2.5 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"><Printer size={18}/></button>
+          <div className="relative">
+            <button onClick={handleShare} title="Share report" className="p-2.5 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"><Share2 size={18}/></button>
+            {shareStatus && (
+              <span className="absolute -bottom-8 right-0 text-xs font-bold bg-ink text-white px-2 py-1 rounded-lg whitespace-nowrap flex items-center gap-1">
+                <Link2 size={12} /> {shareStatus}
+              </span>
+            )}
+          </div>
           <button 
             onClick={handleExport}
             disabled={isExporting || exportSuccess}
@@ -42,7 +131,7 @@ export default function Reports() {
             }`}
           >
             {isExporting ? <Loader2 size={16} className="animate-spin" /> : exportSuccess ? <CheckCircle2 size={16} /> : <Download size={16} />}
-            {isExporting ? "Compiling PDF..." : exportSuccess ? "Downloaded" : "Export PDF"}
+            {isExporting ? "Compiling..." : exportSuccess ? "Downloaded" : "Export Report"}
           </button>
         </div>
       </div>
@@ -84,8 +173,12 @@ export default function Reports() {
               {reportData.summaryParagraph2 || "AI Summary loading..."}
             </p>
           </div>
-          <button className="mt-6 self-start px-6 py-2.5 bg-white text-[var(--color-brand)] font-bold rounded-xl shadow-sm border border-[var(--color-brand)]/30 hover:bg-[var(--color-brand)] hover:text-white transition-all relative z-10">
-            Generate Detailed Excel Report
+          <button
+            onClick={handleExcelExport}
+            disabled={isExportingExcel}
+            className="mt-6 self-start px-6 py-2.5 bg-white text-[var(--color-brand)] font-bold rounded-xl shadow-sm border border-[var(--color-brand)]/30 hover:bg-[var(--color-brand)] hover:text-white transition-all relative z-10 disabled:opacity-60"
+          >
+            {isExportingExcel ? "Generating..." : "Generate Detailed Excel Report"}
           </button>
         </div>
       </div>

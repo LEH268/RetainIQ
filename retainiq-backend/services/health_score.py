@@ -1,37 +1,44 @@
-"""Computes a 0-100 health score from a raw dataset row."""
+"""
+Computes a 0-100 health score.
+
+The base of the score is the model's own inverse churn probability
+(100 - churn_probability), so health and churn stay mathematically
+consistent instead of drifting apart like two independently hand-tuned
+formulas would. A small, explicitly-labeled engagement adjustment is
+layered on top so two customers with an identical churn probability can
+still be differentiated by how actively they use the product.
+"""
+from services.churn_model import predict_churn_probability
+
+ENGAGEMENT_WEIGHTS = {
+    "pod_lis_frequency": {
+        "Daily": 6,
+        "Several times a week": 6,
+        "Never": -6,
+    },
+    "pod_variety_satisfaction": {
+        "Satisfied": 4,
+        "Very Satisfied": 4,
+        "Dissatisfied": -4,
+        "Very Dissatisfied": -4,
+    },
+    "spotify_usage_period": {
+        "More than 2 years": 4,
+        "Less than 6 months": -2,
+    },
+}
+
+
+def _engagement_adjustment(row) -> int:
+    total = 0
+    for field, weights in ENGAGEMENT_WEIGHTS.items():
+        value = str(row.get(field, "") or "")
+        total += weights.get(value, 0)
+    return total
 
 
 def compute_health_score(row):
-    score = 50
-
-    plan = str(row.get("spotify_subscription_plan", "") or "")
-    if "Premium" in plan:
-        score += 25
-    elif "Free" in plan:
-        score -= 10
-
-    try:
-        rating = float(row.get("music_recc_rating", 3) or 3)
-    except (TypeError, ValueError):
-        rating = 3
-    score += (rating - 3) * 8
-
-    pod_freq = str(row.get("pod_lis_frequency", "") or "")
-    if pod_freq in ("Daily", "Several times a week"):
-        score += 10
-    elif pod_freq == "Never":
-        score -= 10
-
-    satisfaction = str(row.get("pod_variety_satisfaction", "") or "")
-    if satisfaction in ("Satisfied", "Very Satisfied"):
-        score += 10
-    elif satisfaction in ("Dissatisfied", "Very Dissatisfied"):
-        score -= 15
-
-    usage = str(row.get("spotify_usage_period", "") or "")
-    if usage == "More than 2 years":
-        score += 8
-    elif usage == "Less than 6 months":
-        score -= 5
-
-    return max(0, min(100, round(score)))
+    churn_probability = predict_churn_probability(row)
+    base = 100 - churn_probability
+    adjusted = base + _engagement_adjustment(row)
+    return max(0, min(100, round(adjusted)))
