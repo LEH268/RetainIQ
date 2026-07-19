@@ -21,8 +21,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
+        "https://retainiq-frontend-u2vh.onrender.com",
     ],
-    allow_origin_regex=r"https://retain-iq-fawn.vercel.app/",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
