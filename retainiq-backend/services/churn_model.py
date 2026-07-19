@@ -36,8 +36,7 @@ NUMERIC_FEATURES = ["music_recc_rating"]
 
 def _derive_label(df: pd.DataFrame) -> pd.Series:
     rating = pd.to_numeric(df["music_recc_rating"], errors="coerce").fillna(3)
-    is_free = df["spotify_subscription_plan"].astype(str).str.contains("Free")
-    return ((is_free) & (rating <= 2)).astype(int)
+    return (rating <= 2).astype(int)
 
 
 def _build_pipeline() -> Pipeline:
