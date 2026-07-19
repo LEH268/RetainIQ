@@ -21,8 +21,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "https://retain-7ec9nnc42-leh268s-projects.vercel.app",
     ],
+    allow_origin_regex=r"https://retain-iq.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
