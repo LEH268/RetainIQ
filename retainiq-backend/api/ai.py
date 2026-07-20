@@ -323,3 +323,43 @@ Return the email text only."""
         "emailDraft": email,
         "recipientCount": count,
     }
+
+@router.get("/ai/generate-insights")
+def generate_dashboard_insights():
+
+    customers = get_customers()
+
+    total = len(customers)
+
+    high_risk = len(
+        [
+            c for c in customers
+            if c["risk_level"] == "High Risk"
+        ]
+    )
+
+    moderate_risk = len(
+        [
+            c for c in customers
+            if c["risk_level"] == "Moderate Risk"
+        ]
+    )
+
+    healthy = len(
+        [
+            c for c in customers
+            if c["risk_level"] == "Healthy"
+        ]
+    )
+
+
+    insights = [
+        f"{high_risk} customers are currently classified as high churn risk.",
+        f"{moderate_risk} customers require monitoring and engagement.",
+        f"{healthy} customers show healthy usage behaviour.",
+    ]
+
+
+    return {
+        "insights": insights
+    }
