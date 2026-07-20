@@ -41,9 +41,9 @@ export default function CustomerProfile() {
       .then(res => setInsights(res.data.insights || []))
       .catch(err => {
         setInsightsError(
-          err.response?.status === 503 
-             ? "AI service isn't configured on the backend (missing ANTHROPIC_API_KEY)." 
-             : "Failed to generate AI insights. Check the backend logs."
+          err.response?.status === 503
+            ? "AI service isn't configured on the backend (missing GEMINI_API_KEY)."
+            : "Failed to generate AI insights. Check the backend logs."
         );
       })
       .finally(() => setInsightsLoading(false));
@@ -106,7 +106,9 @@ export default function CustomerProfile() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
         <div>
           <h1 className="font-display text-3xl font-bold">{customer.name}</h1>
-          <p className="text-sm text-ink/60 font-medium mt-1">{customer.company} • {customer.email}</p>
+          <p className="text-sm text-ink/60 font-medium mt-1">
+            {customer.age ? `${customer.age} · ` : ""}{customer.gender} · {customer.email}
+          </p>
         </div>
         <div className="flex gap-4 items-center">
           <span className="text-sm font-bold bg-gray-100 px-3 py-1 rounded-lg text-gray-700 shadow-sm">{customer.plan}</span>
@@ -120,10 +122,29 @@ export default function CustomerProfile() {
             <h3 className="font-bold font-display">Profile</h3>
           </div>
           <dl className="space-y-2 text-sm">
-            <div className="flex justify-between"><dt className="text-ink/50 font-medium">Age Group</dt><dd className="font-bold">{customer.age}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink/50 font-medium">Gender</dt><dd className="font-bold">{customer.gender}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink/50 font-medium">Device</dt><dd className="font-bold">{customer.company}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink/50 font-medium">Account Tenure</dt><dd className="font-bold">{customer.usageTenure}</dd></div>
+            <div className="flex justify-between">
+              <dt className="text-ink/50 font-medium">Age</dt>
+              <dd className="font-bold">
+                {customer.age ?? "—"}
+                <span className="text-xs text-ink/40 font-medium ml-1">({customer.ageBand})</span>
+              </dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-ink/50 font-medium">Gender</dt>
+              <dd className="font-bold">{customer.gender}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-ink/50 font-medium">Listening Device</dt>
+              <dd className="font-bold text-right max-w-[60%]">{customer.device}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-ink/50 font-medium">Account Tenure</dt>
+              <dd className="font-bold">{customer.usageTenure}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-ink/50 font-medium">Segment</dt>
+              <dd className="font-bold">{customer.segment}</dd>
+            </div>
           </dl>
         </div>
         

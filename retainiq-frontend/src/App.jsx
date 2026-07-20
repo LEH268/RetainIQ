@@ -29,7 +29,9 @@ function AppLayout({ children, onLogout }) {
   return (
     <div className="flex bg-[var(--color-canvas)] h-screen overflow-hidden">
       <Sidebar onLogout={onLogout} />
-      <main className="flex-1 overflow-y-auto p-10">{children}</main>
+      <main className="flex-1 min-w-0 overflow-y-auto p-6 lg:p-8">
+        <div className="h-full min-h-0">{children}</div>
+      </main>
       <AIChat />
     </div>
   );

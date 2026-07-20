@@ -1,27 +1,379 @@
+"""Thin wrapper around the Google Gemini API with caching, retries, and JSON helpers.
+
+The public interface (generate_text, generate_json_list, is_configured,
+AIClientError) is unchanged, so no calling code needs to be touched.
+"""
+
+import hashlib
+import json
+import logging
 import os
-from anthropic import Anthropic, APIError
+import random
+import re
+import threading
+import time
+
+from google import genai
+from google.genai import types
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+CACHE_TTL_SECONDS = int(os.environ.get("AI_CACHE_TTL", "1800"))
+
+MAX_RETRIES = 3
+BASE_BACKOFF_SECONDS = 1.5
+
+# When the API reports a hard quota exhaustion (limit: 0, or a daily cap),
+# stop calling out entirely for this window instead of retrying every request.
+QUOTA_COOLDOWN_SECONDS = 300
+
+_cache = {}
+_cache_lock = threading.Lock()
+_client = None
+_client_lock = threading.Lock()
+
+_quota_blocked_until = 0.0
+_quota_reason = ""
+_quota_lock = threading.Lock()
+
 
 class AIClientError(Exception):
-    """Raised when the AI backend is not configured or the call fails."""
-    pass
+    """Raised when the AI backend is not configured or a call fails."""
 
-_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-3-5-sonnet-20240620")
+
+def _api_key():
+    """Return the configured Gemini API key, if any."""
+    return os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+
+
+def is_configured():
+    """Return True when an API key is present in the environment."""
+    return bool(_api_key())
+
 
 def _get_client():
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise AIClientError("ANTHROPIC_API_KEY is not set.")
-    return Anthropic(api_key=api_key)
+    """Return a lazily constructed Gemini client."""
+    global _client
+    if _client is not None:
+        return _client
 
-def generate_text(system_prompt: str, user_prompt: str, max_tokens: int = 500) -> str:
-    client = _get_client()
-    try:
-        response = client.messages.create(
-            model=_MODEL,
-            max_tokens=max_tokens,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_prompt}],
+    key = _api_key()
+    if not key:
+        raise AIClientError(
+            "GEMINI_API_KEY is not set. Add it to retainiq-backend/.env"
         )
-        return "".join([block.text for block in response.content if block.type == "text"]).strip()
-    except Exception as exc:
-        raise AIClientError(f"Anthropic API call failed: {exc}")
+
+    with _client_lock:
+        if _client is None:
+            _client = genai.Client(api_key=key)
+    return _client
+
+
+def _cache_key(system_prompt, user_prompt, max_tokens):
+    """Return a stable hash key for a prompt triple."""
+    payload = f"{DEFAULT_MODEL}|{max_tokens}|{system_prompt}|{user_prompt}"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _cache_get(key):
+    """Return a cached response if present and not expired."""
+    with _cache_lock:
+        entry = _cache.get(key)
+        if entry is None:
+            return None
+        value, expires_at = entry
+        if time.time() > expires_at:
+            _cache.pop(key, None)
+            return None
+        return value
+
+
+def _cache_set(key, value):
+    """Store a response with a TTL."""
+    with _cache_lock:
+        _cache[key] = (value, time.time() + CACHE_TTL_SECONDS)
+
+
+def clear_cache():
+    """Drop all cached AI responses."""
+    with _cache_lock:
+        _cache.clear()
+
+
+def _classify_error(exc):
+    """Categorise an API exception.
+
+    Returns one of: 'quota_exhausted', 'rate_limited', 'auth', 'other'.
+
+    The distinction between the first two matters: a transient per-minute
+    limit is worth retrying, but a zero or daily-capped quota is not — the
+    same call will fail identically for hours.
+    """
+    text = str(exc).lower()
+
+    if "401" in text or "403" in text or "api key not valid" in text:
+        return "auth"
+
+    if "429" in text or "resource_exhausted" in text or "quota" in text:
+        # "limit: 0" means the project has no allocation for this model.
+        if "limit: 0" in text:
+            return "quota_exhausted"
+        # A per-day cap will not reset within any reasonable retry window.
+        if "perday" in text.replace("_", "").replace(" ", ""):
+            return "quota_exhausted"
+        return "rate_limited"
+
+    return "other"
+
+
+def _set_quota_block(reason):
+    """Suppress outbound calls for a cooldown window after a hard quota failure."""
+    global _quota_blocked_until, _quota_reason
+    with _quota_lock:
+        _quota_blocked_until = time.time() + QUOTA_COOLDOWN_SECONDS
+        _quota_reason = reason
+    logger.warning(
+        "Gemini quota exhausted; suppressing AI calls for %ds. %s",
+        QUOTA_COOLDOWN_SECONDS, reason,
+    )
+
+
+def _quota_block_active():
+    """Return the remaining cooldown seconds, or 0 if calls may proceed."""
+    with _quota_lock:
+        remaining = _quota_blocked_until - time.time()
+    return max(0, int(remaining))
+
+
+def clear_quota_block():
+    """Manually lift the quota cooldown, e.g. after switching API keys."""
+    global _quota_blocked_until, _quota_reason
+    with _quota_lock:
+        _quota_blocked_until = 0.0
+        _quota_reason = ""
+
+
+def ai_status():
+    """Return a structured description of AI availability for the UI."""
+    if not is_configured():
+        return {
+            "available": False,
+            "state": "not_configured",
+            "model": DEFAULT_MODEL,
+            "message": (
+                "GEMINI_API_KEY is not set. Add it to retainiq-backend/.env "
+                "and restart the server."
+            ),
+        }
+
+    cooldown = _quota_block_active()
+    if cooldown:
+        return {
+            "available": False,
+            "state": "quota_exhausted",
+            "model": DEFAULT_MODEL,
+            "retryInSeconds": cooldown,
+            "message": (
+                f"Gemini quota exhausted for {DEFAULT_MODEL}. {_quota_reason} "
+                "All figures on screen are computed from the dataset and remain "
+                "accurate; only AI-written narrative is unavailable."
+            ),
+        }
+
+    return {
+        "available": True,
+        "state": "ready",
+        "model": DEFAULT_MODEL,
+        "message": f"Connected to {DEFAULT_MODEL}.",
+    }
+
+
+def _quota_message():
+    """Return an actionable message for a hard quota failure."""
+    return (
+        f"Gemini reported zero available quota for {DEFAULT_MODEL}. This is not "
+        "a temporary rate limit. Create a new API key in a new project at "
+        "aistudio.google.com/apikey, or set GEMINI_MODEL to a different model "
+        "such as gemini-2.0-flash-lite, then restart the backend."
+    )
+
+
+def _extract_text(response):
+    """Pull plain text out of a Gemini response object."""
+    direct = getattr(response, "text", None)
+    if direct:
+        return direct.strip()
+
+    parts = []
+    for candidate in getattr(response, "candidates", []) or []:
+        content = getattr(candidate, "content", None)
+        for part in getattr(content, "parts", []) or []:
+            text = getattr(part, "text", None)
+            if text:
+                parts.append(text)
+    return "".join(parts).strip()
+
+
+def _call_model(client, user_prompt, config):
+    """Execute one generation with retries, honouring the quota cooldown.
+
+    Retries only transient per-minute limits. Hard quota exhaustion and auth
+    failures fail immediately rather than burning attempts on a wall.
+    """
+    cooldown = _quota_block_active()
+    if cooldown:
+        raise AIClientError(
+            f"{_quota_reason} Retrying in {cooldown}s."
+        )
+
+    last_error = None
+
+    for attempt in range(MAX_RETRIES):
+        try:
+            response = client.models.generate_content(
+                model=DEFAULT_MODEL,
+                contents=user_prompt,
+                config=config,
+            )
+            text = _extract_text(response)
+            if not text:
+                raise AIClientError("Gemini returned an empty response.")
+            return text
+
+        except AIClientError:
+            raise
+        except Exception as exc:
+            last_error = exc
+            category = _classify_error(exc)
+
+            if category == "quota_exhausted":
+                message = _quota_message()
+                _set_quota_block(message)
+                raise AIClientError(message) from exc
+
+            if category == "auth":
+                raise AIClientError(
+                    "Gemini rejected the API key. Verify GEMINI_API_KEY in "
+                    "retainiq-backend/.env is correct and not expired."
+                ) from exc
+
+            if category == "rate_limited" and attempt < MAX_RETRIES - 1:
+                delay = BASE_BACKOFF_SECONDS * (2 ** attempt) + random.uniform(0, 0.5)
+                logger.warning(
+                    "Gemini rate limited, retrying in %.1fs (attempt %d/%d)",
+                    delay, attempt + 1, MAX_RETRIES,
+                )
+                time.sleep(delay)
+                continue
+
+            break
+
+    if _classify_error(last_error) == "rate_limited":
+        raise AIClientError(
+            "Gemini rate limit reached after several retries. Wait about a "
+            "minute before trying again."
+        ) from last_error
+
+    raise AIClientError(f"Gemini API call failed: {last_error}") from last_error
+
+
+def generate_text(system_prompt, user_prompt, max_tokens=500, use_cache=True):
+    """Return generated text for the given prompts.
+
+    Identical prompts are served from an in-process TTL cache.
+    """
+    key = _cache_key(system_prompt, user_prompt, max_tokens)
+    if use_cache:
+        cached = _cache_get(key)
+        if cached is not None:
+            return cached
+
+    client = _get_client()
+
+    config = types.GenerateContentConfig(
+        system_instruction=system_prompt,
+        max_output_tokens=max_tokens,
+        temperature=0.7,
+    )
+
+    text = _call_model(client, user_prompt, config)
+
+    if use_cache:
+        _cache_set(key, text)
+    return text
+
+
+def _extract_json(raw):
+    """Pull the first JSON array or object out of a model response."""
+    cleaned = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.MULTILINE).strip()
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+
+    match = re.search(r"(\[.*\]|\{.*\})", cleaned, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(1))
+        except json.JSONDecodeError:
+            return None
+    return None
+
+
+def generate_json_list(system_prompt, user_prompt, max_tokens=500, fallback=None):
+    """Return a list parsed from the model response, or `fallback` on failure.
+
+    Never raises. Callers get usable output whether or not the AI is reachable.
+    Uses Gemini's native JSON output mode for reliable parsing.
+    """
+    fallback = fallback or []
+
+    key = _cache_key(system_prompt, user_prompt + "|json", max_tokens)
+    cached = _cache_get(key)
+    if cached is not None:
+        try:
+            return json.loads(cached)
+        except json.JSONDecodeError:
+            pass
+
+    try:
+        client = _get_client()
+    except AIClientError as exc:
+        logger.info("AI unavailable, returning fallback: %s", exc)
+        return list(fallback)
+
+    config = types.GenerateContentConfig(
+        system_instruction=system_prompt,
+        max_output_tokens=max_tokens,
+        temperature=0.7,
+        response_mime_type="application/json",
+        response_schema={"type": "ARRAY", "items": {"type": "STRING"}},
+    )
+
+    try:
+        raw = _call_model(client, user_prompt, config)
+    except AIClientError as exc:
+        logger.info("AI call failed, returning fallback: %s", exc)
+        return list(fallback)
+
+    parsed = _extract_json(raw)
+
+    if isinstance(parsed, list) and parsed:
+        result = [str(item) for item in parsed]
+        _cache_set(key, json.dumps(result))
+        return result
+
+    if isinstance(parsed, dict):
+        for value in parsed.values():
+            if isinstance(value, list) and value:
+                result = [str(item) for item in value]
+                _cache_set(key, json.dumps(result))
+                return result
+
+    lines = [
+        line.strip("-• \t")
+        for line in raw.splitlines()
+        if line.strip() and len(line.strip()) > 12
+    ]
+    return lines[:6] if lines else list(fallback)

@@ -1,128 +1,242 @@
 import { useState, useEffect } from "react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from "recharts";
-import { Download, Calendar, BarChart2, TrendingUp, TrendingDown, FileText, Sparkles } from "lucide-react";
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
+  ResponsiveContainer, AreaChart, Area, Legend,
+} from "recharts";
+import {
+  Download, Calendar, TrendingUp, TrendingDown, Sparkles, Loader2, Info,
+} from "lucide-react";
 import api from "../lib/api";
 
 export default function Analytics() {
-  const [dateFrom, setDateFrom] = useState("2025-01-01");
-  const [dateTo, setDateTo] = useState("2025-06-30");
+  const [timeframe, setTimeframe] = useState("Monthly");
   const [isComparing, setIsComparing] = useState(false);
   const [chartData, setChartData] = useState([]);
-  const [exportFormat, setExportFormat] = useState("PDF");
-  const [exportType, setExportType] = useState("All Reports");
-
-  const is2024 = dateFrom.startsWith("2024");
-  const revenueTrend = is2024 ? "+22.1%" : "+44.4%";
-  const totalGrowth = is2024 ? "+8.3%" : "+16.6%";
-  const avgChurn = "12.5%"; 
+  const [kpis, setKpis] = useState([]);
+  const [note, setNote] = useState("");
+  const [summary, setSummary] = useState([]);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [expandedKpi, setExpandedKpi] = useState(null);
 
   useEffect(() => {
-      api.get(`/api/analytics?timeframe=Monthly&compare=${isComparing}`).then(res => {
-          setChartData(res.data);
-      }).catch(console.error);
-  }, [isComparing, dateFrom, dateTo]);
+    setLoading(true);
+    Promise.all([
+      api.get(`/api/analytics?timeframe=${timeframe}&compare=${isComparing}`),
+      api.get(`/api/analytics/kpis?timeframe=${timeframe}&compare=${isComparing}`),
+    ])
+      .then(([seriesRes, kpiRes]) => {
+        setChartData(seriesRes.data);
+        setKpis(kpiRes.data.kpis || []);
+        setNote(kpiRes.data.note || "");
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [timeframe, isComparing]);
+
+  useEffect(() => {
+    api
+      .get("/api/analytics/summary")
+      .then((res) => setSummary(res.data.summary || []))
+      .catch(() => setSummary([]))
+      .finally(() => setSummaryLoading(false));
+  }, []);
 
   const handleExport = () => {
-    alert(`Exporting ${exportType} as ${exportFormat} from ${dateFrom} to ${dateTo}...`);
+    if (!chartData.length) return;
+    const headers = Object.keys(chartData[0]);
+    const rows = [
+      headers.join(","),
+      ...chartData.map((row) => headers.map((key) => row[key]).join(",")),
+    ];
+    const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `retainiq-analytics-${timeframe.toLowerCase()}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto pb-10">
       <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
         <h1 className="font-display text-3xl font-bold mb-6">Analytics & Reports</h1>
-        
+
         <div className="flex flex-wrap gap-4 items-end bg-gray-50 p-4 rounded-xl border border-gray-200">
           <div>
-            <label className="block text-xs font-bold text-ink/60 mb-1">From</label>
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="px-3 py-2 rounded-lg border-2 border-gray-200 text-sm font-bold outline-none focus:border-[var(--color-brand)]" />
+            <label className="block text-xs font-bold text-ink/60 mb-1">Timeframe</label>
+            <select
+              value={timeframe}
+              onChange={(e) => setTimeframe(e.target.value)}
+              className="px-4 py-2 rounded-lg border-2 border-gray-200 text-sm font-bold outline-none focus:border-[var(--color-brand)]"
+            >
+              <option>Monthly</option>
+              <option>Quarterly</option>
+            </select>
           </div>
-          <div>
-            <label className="block text-xs font-bold text-ink/60 mb-1">To</label>
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="px-3 py-2 rounded-lg border-2 border-gray-200 text-sm font-bold outline-none focus:border-[var(--color-brand)]" />
-          </div>
-          <button onClick={() => setIsComparing(!isComparing)} className={`flex items-center gap-2 rounded-xl border-2 px-4 py-2.5 text-sm font-bold transition-all ${isComparing ? 'bg-[var(--color-brand-soft)] border-[var(--color-brand)] text-[var(--color-brand-dark)]' : 'bg-white border-[var(--color-border)] hover:border-[var(--color-brand)] hover:text-[var(--color-brand)]'}`}>
-            <Calendar size={16} /> {isComparing ? "Comparing to Previous Period" : "Compare Previous"}
+          <button
+            onClick={() => setIsComparing(!isComparing)}
+            className={`flex items-center gap-2 rounded-xl border-2 px-4 py-2.5 text-sm font-bold transition-all ${
+              isComparing
+                ? "bg-[var(--color-brand-soft)] border-[var(--color-brand)] text-[var(--color-brand-dark)]"
+                : "bg-white border-[var(--color-border)] hover:border-[var(--color-brand)]"
+            }`}
+          >
+            <Calendar size={16} /> {isComparing ? "Comparing to prior year" : "Compare prior year"}
+          </button>
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-2 rounded-xl bg-[var(--color-ink)] text-white px-5 py-2.5 text-sm font-bold shadow-sm ml-auto"
+          >
+            <Download size={16} /> Export CSV
           </button>
         </div>
+
+        {note && (
+          <div className="mt-4 flex items-start gap-2 text-xs font-medium text-ink/50 bg-blue-50/50 border border-blue-100 p-3 rounded-lg">
+            <Info size={14} className="shrink-0 mt-0.5 text-blue-600" />
+            <span>{note}</span>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-         <div className="bg-white p-5 rounded-2xl border border-[var(--color-border)] shadow-sm flex items-center justify-between">
-           <div><p className="text-sm font-bold text-ink/60">Total Growth</p><p className="text-3xl font-display font-bold mt-1">{totalGrowth}</p></div>
-           <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center"><TrendingUp size={24}/></div>
-         </div>
-         <div className="bg-white p-5 rounded-2xl border border-[var(--color-border)] shadow-sm flex items-center justify-between">
-           <div><p className="text-sm font-bold text-ink/60">Revenue Trend</p><p className="text-3xl font-display font-bold mt-1">{revenueTrend}</p></div>
-           <div className="w-12 h-12 rounded-full bg-blue-50 text-[var(--color-brand)] flex items-center justify-center"><BarChart2 size={24}/></div>
-         </div>
-         <div className="bg-white p-5 rounded-2xl border border-[var(--color-border)] shadow-sm flex items-center justify-between">
-           <div><p className="text-sm font-bold text-ink/60">Avg. Churn Rate</p><p className="text-3xl font-display font-bold mt-1 text-rose-600">{avgChurn}</p></div>
-           <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center"><TrendingDown size={24}/></div>
-         </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {kpis.map((kpi) => (
+          <button
+            key={kpi.id}
+            onClick={() => setExpandedKpi(expandedKpi === kpi.id ? null : kpi.id)}
+            className="bg-white p-5 rounded-2xl border border-[var(--color-border)] shadow-sm text-left hover:border-[var(--color-brand)] transition-colors"
+          >
+            <div className="flex items-start justify-between mb-2">
+              <p className="text-sm font-bold text-ink/60">{kpi.label}</p>
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  kpi.tone === "up"
+                    ? "bg-emerald-50 text-emerald-600"
+                    : "bg-rose-50 text-rose-600"
+                }`}
+              >
+                {kpi.tone === "up" ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+              </div>
+            </div>
+            <p className="text-3xl font-display font-bold">{kpi.value}</p>
+            <p className="text-xs font-bold text-ink/40 mt-1 uppercase tracking-wide">
+              {kpi.window}
+            </p>
+            <p className="text-xs font-medium text-ink/60 mt-2 leading-relaxed">
+              {expandedKpi === kpi.id ? kpi.definition : kpi.supporting}
+            </p>
+            <p className="text-[10px] font-bold text-[var(--color-brand)] mt-2 uppercase">
+              {expandedKpi === kpi.id ? "Show less" : "What does this mean?"}
+            </p>
+          </button>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
-          <h3 className="mb-6 text-lg font-bold font-display">Customer Growth {isComparing && "(Compare Mode)"}</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-brand)" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="var(--color-brand)" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis fontSize={12} tickLine={false} axisLine={false} />
-              <Tooltip cursor={{ stroke: 'var(--color-border)' }} />
-              <Area type="monotone" name="Current Year" dataKey="users" stroke="var(--color-brand)" fillOpacity={1} fill="url(#colorUsers)" strokeWidth={3} />
-              {isComparing && <Area type="monotone" name="Previous Year" dataKey="previousYearUsers" stroke="#94A3B8" fillOpacity={1} fill="#e2e8f0" strokeWidth={2} strokeDasharray="5 5" />}
-            </AreaChart>
-          </ResponsiveContainer>
+          <h3 className="mb-1 text-lg font-bold font-display">Subscriber Trend</h3>
+          <p className="text-xs font-medium text-ink/50 mb-5">
+            Projected subscriber count by {timeframe.toLowerCase()} period
+          </p>
+          {loading ? (
+            <div className="h-[300px] flex items-center justify-center text-ink/40">
+              <Loader2 className="animate-spin" />
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-brand)" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="var(--color-brand)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis fontSize={12} tickLine={false} axisLine={false} domain={["dataMin - 50", "dataMax + 50"]} />
+                <Tooltip cursor={{ stroke: "var(--color-border)" }} />
+                <Legend wrapperStyle={{ fontSize: 12, fontWeight: 700 }} />
+                <Area
+                  type="monotone"
+                  name="Current year"
+                  dataKey="users"
+                  stroke="var(--color-brand)"
+                  fill="url(#colorUsers)"
+                  strokeWidth={3}
+                />
+                {isComparing && (
+                  <Area
+                    type="monotone"
+                    name="Prior year"
+                    dataKey="previousYearUsers"
+                    stroke="#94A3B8"
+                    fill="#e2e8f0"
+                    fillOpacity={0.5}
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                  />
+                )}
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </div>
-        
-        <div className="bg-gradient-to-br from-blue-50 to-[var(--color-brand-soft)] p-8 rounded-2xl border border-[var(--color-brand)]/20 shadow-sm flex flex-col justify-center relative overflow-hidden">
-          <h3 className="font-bold text-2xl font-display text-ink mb-4 relative z-10 flex items-center gap-2">
-            <Sparkles className="text-[var(--color-brand)]"/> Executive AI Summary
-          </h3>
-          <div className="space-y-4 relative z-10">
-            <p className="text-ink/80 leading-relaxed font-medium bg-white/60 p-4 rounded-xl border border-white">
-              Overall revenue increased by 12% in the selected period. Premium subscriptions contributed 58% of the total revenue.
-            </p>
-            <p className="text-ink/80 leading-relaxed font-medium bg-white/60 p-4 rounded-xl border border-white">
-              At Risk customers decreased by 5%. Recommended strategy is to expand the Premium campaign while increasing retention efforts for Basic users.
-            </p>
-          </div>
+
+        <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
+          <h3 className="mb-1 text-lg font-bold font-display">Churn Rate</h3>
+          <p className="text-xs font-medium text-ink/50 mb-5">
+            Share of subscribers scored High Risk each period
+          </p>
+          {loading ? (
+            <div className="h-[300px] flex items-center justify-center text-ink/40">
+              <Loader2 className="animate-spin" />
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `${value}%`}
+                />
+                <Tooltip formatter={(value) => `${value}%`} />
+                <Line
+                  type="monotone"
+                  name="Churn rate"
+                  dataKey="churnRate"
+                  stroke="#E11D48"
+                  strokeWidth={3}
+                  dot={{ r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
-        <h3 className="mb-4 text-lg font-bold font-display">Export Reports</h3>
-        <div className="flex flex-wrap gap-4 items-end">
-          <div>
-            <label className="block text-xs font-bold text-ink/60 mb-1">Format</label>
-            <select value={exportFormat} onChange={e => setExportFormat(e.target.value)} className="px-4 py-2 rounded-lg border-2 border-gray-200 text-sm font-bold outline-none focus:border-[var(--color-brand)]">
-              <option>PDF</option>
-              <option>Excel</option>
-              <option>CSV</option>
-              <option>Word</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-ink/60 mb-1">Report Type</label>
-            <select value={exportType} onChange={e => setExportType(e.target.value)} className="px-4 py-2 rounded-lg border-2 border-gray-200 text-sm font-bold outline-none focus:border-[var(--color-brand)]">
-              <option>All Reports</option>
-              <option>Revenue</option>
-              <option>Customers</option>
-              <option>Campaign</option>
-              <option>Analytics</option>
-              <option>Executive Summary</option>
-            </select>
-          </div>
-          <button onClick={handleExport} className="flex items-center gap-2 rounded-xl bg-[var(--color-ink)] text-white px-6 py-2 text-sm font-bold shadow-sm hover:bg-opacity-90 transition-all">
-            <Download size={16} /> Export
-          </button>
+      <div className="bg-gradient-to-br from-blue-50 to-[var(--color-brand-soft)] p-8 rounded-2xl border border-[var(--color-brand)]/20 shadow-sm">
+        <h3 className="font-bold text-2xl font-display text-ink mb-4 flex items-center gap-2">
+          <Sparkles className="text-[var(--color-brand)]" /> Executive AI Summary
+        </h3>
+        <div className="space-y-4">
+          {summaryLoading ? (
+            <div className="flex items-center gap-2 text-sm font-bold text-ink/50">
+              <Loader2 size={16} className="animate-spin" /> Generating summary...
+            </div>
+          ) : (
+            summary.map((paragraph, index) => (
+              <p
+                key={index}
+                className="text-ink/80 leading-relaxed font-medium bg-white/60 p-4 rounded-xl border border-white"
+              >
+                {paragraph}
+              </p>
+            ))
+          )}
         </div>
       </div>
     </div>
