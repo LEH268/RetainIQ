@@ -40,7 +40,6 @@ export default function Reports() {
         (row) => `  ${row.segment}: at-risk $${row.atRiskRevenue}, saved $${row.savedRevenue}`
       ),
     ];
-
     const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -62,7 +61,6 @@ export default function Reports() {
       text: `RetainIQ report: ${reportData?.atRisk || ""} at risk, ${reportData?.saved || ""} saved by AI.`,
       url: window.location.href,
     };
-
     if (navigator.share) {
       try { await navigator.share(shareData); } catch (err) {}
       return;
@@ -106,7 +104,7 @@ export default function Reports() {
         
         <div className="flex items-center gap-3">
           <select 
-            value={reportPeriod} 
+            value={reportPeriod}
             onChange={(e) => setReportPeriod(e.target.value)}
             className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold bg-gray-50 outline-none focus:border-[var(--color-brand)]"
           >

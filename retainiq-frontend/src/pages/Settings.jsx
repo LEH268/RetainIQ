@@ -76,7 +76,7 @@ export default function Settings() {
                 <Key size={16} className="text-ink/60"/> External AI Model Key (Optional)
               </label>
               <input type="password" placeholder="Configured via Backend environment variables (ANTHROPIC_API_KEY)..." disabled className="w-full rounded-xl border-2 border-gray-200 bg-gray-100 px-4 py-2.5 text-sm font-medium outline-none font-mono" />
-              <p className="text-xs text-ink/50 font-bold mt-1.5">This application calls the Anthropic API from the FastAPI backend — set ANTHROPIC_API_KEY in retainiq-backend/.env.</p>
+              <p className="text-xs text-ink/50 font-bold mt-1.5">This application calls the Anthropic API from the FastAPI backend - set ANTHROPIC_API_KEY in retainiq-backend/.env.</p>
             </div>
           </div>
         </section>

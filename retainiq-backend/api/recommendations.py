@@ -1,42 +1,181 @@
 from fastapi import APIRouter
+
+from data_processing.dataset_loader import (
+    get_customers
+)
+
+
 from pydantic import BaseModel
 
-from data_processing.dataset_loader import get_customers
+
 
 router = APIRouter()
 
-_dismissed_ids = set()
+
+
+dismissed = set()
+
 
 
 class RecommendationAction(BaseModel):
-    type: str
+
+    type:str
+
+
+
+
+def generate_action(customer):
+
+
+    if customer["spotify_subscription_plan"] == "Free (ad-supported)":
+
+        return {
+            "action":
+            "Offer Premium trial",
+
+            "reason":
+            "Free users have higher conversion opportunity."
+        }
+
+
+
+    if customer["music_lis_frequency"] in [
+        "Never",
+        "Rarely"
+    ]:
+
+        return {
+
+            "action":
+            "Send re-engagement campaign",
+
+
+            "reason":
+            "Listening activity is decreasing."
+
+        }
+
+
+
+    return {
+
+
+        "action":
+        "Send loyalty reward",
+
+
+        "reason":
+        "Maintain customer engagement."
+
+    }
+
+
 
 
 @router.get("/recommendations")
 def recommendations():
+
+
     customers = get_customers()
-    flagged = [c for c in customers if c["risk_level"] in ("High Risk", "Moderate Risk")]
-    flagged.sort(key=lambda c: c["churn_probability"], reverse=True)
 
-    results = []
-    for c in flagged[:10]:
-        if c["id"] in _dismissed_ids:
+
+
+    risky = [
+
+        c for c in customers
+
+        if c["risk_level"]
+        !=
+        "Healthy"
+
+    ]
+
+
+
+    risky.sort(
+
+        key=lambda x:
+        x["churn_probability"],
+
+        reverse=True
+
+    )
+
+
+
+    result=[]
+
+
+
+    for customer in risky[:10]:
+
+
+        if customer["id"] in dismissed:
+
             continue
-        priority = "High" if c["risk_level"] == "High Risk" else "Medium"
-        success = max(40, 90 - c["churn_probability"])
-        results.append({
-            "id": c["id"],
-            "customer": c["name"],
-            "risk": c["risk_level"],
-            "rec": c["recommendation"]["action"],
-            "success": f"{success}%",
-            "reason": c["recommendation"]["reason"],
-            "priority": priority,
+
+
+
+        action = generate_action(
+            customer
+        )
+
+
+        result.append({
+
+            "id":
+            customer["id"],
+
+
+            "customer":
+            customer["Name"],
+
+
+            "risk":
+            customer["risk_level"],
+
+
+            "churnProbability":
+            customer["churn_probability"],
+
+
+            "recommendation":
+            action["action"],
+
+
+            "reason":
+            action["reason"]
+
         })
-    return results
 
 
-@router.post("/recommendations/{customer_id}/action")
-def act_on_recommendation(customer_id: str, payload: RecommendationAction):
-    _dismissed_ids.add(customer_id)
-    return {"status": "ok", "type": payload.type, "customerId": customer_id}
+    return result
+
+
+
+
+@router.post(
+"/recommendations/{customer_id}/action"
+)
+def action(
+    customer_id:str,
+    payload:RecommendationAction
+):
+
+
+    dismissed.add(
+        customer_id
+    )
+
+
+    return {
+
+        "status":"ok",
+
+        "customerId":
+        customer_id,
+
+        "action":
+        payload.type
+
+    }

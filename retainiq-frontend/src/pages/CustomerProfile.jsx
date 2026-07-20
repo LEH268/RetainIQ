@@ -13,7 +13,6 @@ export default function CustomerProfile() {
   const [selectedAction, setSelectedAction] = useState(null);
   const [simulatedChurn, setSimulatedChurn] = useState(null);
   const [simulationOptions, setSimulationOptions] = useState([]);
-  
   const [insights, setInsights] = useState([]);
   const [insightsLoading, setInsightsLoading] = useState(true);
   const [insightsError, setInsightsError] = useState("");
@@ -33,7 +32,7 @@ export default function CustomerProfile() {
         console.error(err);
         setLoading(false);
       });
-    }, [id]);
+  }, [id]);
 
   useEffect(() => {
     setInsightsLoading(true);
@@ -43,8 +42,8 @@ export default function CustomerProfile() {
       .catch(err => {
         setInsightsError(
           err.response?.status === 503 
-            ? "AI service isn't configured on the backend (missing ANTHROPIC_API_KEY)." 
-            : "Failed to generate AI insights. Check the backend logs."
+             ? "AI service isn't configured on the backend (missing ANTHROPIC_API_KEY)." 
+             : "Failed to generate AI insights. Check the backend logs."
         );
       })
       .finally(() => setInsightsLoading(false));
@@ -76,7 +75,11 @@ export default function CustomerProfile() {
   };
 
   if (loading) {
-     return <div className="flex h-screen items-center justify-center font-display text-lg text-ink/50"><Loader2 className="animate-spin mr-2"/> Processing AI Profile...</div>;
+    return (
+      <div className="flex h-screen items-center justify-center font-display text-lg text-ink/50">
+        <Loader2 className="animate-spin mr-2"/> Processing AI Profile...
+      </div>
+    );
   }
 
   if (!customer) {
@@ -99,7 +102,7 @@ export default function CustomerProfile() {
       <Link to="/customers" className="flex w-fit items-center gap-1.5 text-sm font-bold text-ink/60 hover:text-[var(--color-brand)] transition-colors">
         <ArrowLeft size={16} /> Back to Customers
       </Link>
-
+      
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
         <div>
           <h1 className="font-display text-3xl font-bold">{customer.name}</h1>
@@ -123,6 +126,7 @@ export default function CustomerProfile() {
             <div className="flex justify-between"><dt className="text-ink/50 font-medium">Account Tenure</dt><dd className="font-bold">{customer.usageTenure}</dd></div>
           </dl>
         </div>
+        
         <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Music size={18} className="text-[var(--color-brand)]" />
@@ -135,6 +139,7 @@ export default function CustomerProfile() {
             <div className="flex justify-between"><dt className="text-ink/50 font-medium">Recommendation Rating</dt><dd className="font-bold">{customer.recommendationRating != null ? `${customer.recommendationRating}/5` : "N/A"}</dd></div>
           </dl>
         </div>
+
         <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Headphones size={18} className="text-[var(--color-brand)]" />
@@ -155,11 +160,11 @@ export default function CustomerProfile() {
             <div className={`w-32 h-32 mx-auto rounded-full border-8 flex items-center justify-center mb-4 ${customer.healthScore > 60 ? 'border-emerald-500 text-emerald-600' : 'border-rose-500 text-rose-600'}`}>
               <span className="text-4xl font-display font-bold">{customer.healthScore}</span>
             </div>
-            <p className={`text-sm font-bold inline-block px-3 py-1 rounded-lg mb-4 ${customer.healthScore > 60 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'}`}> 
-              {customer.healthScore > 60 ? 'Healthy' : 'Poor'}
+            <p className={`text-sm font-bold inline-block px-3 py-1 rounded-lg mb-4 ${customer.healthScore > 60 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'}`}>
+               {customer.healthScore > 60 ? 'Healthy' : 'Poor'}
             </p>
           </div>
-
+          
           <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm text-center">
             <h2 className="text-lg font-bold font-display mb-4">Churn Prediction</h2>
             <div className="w-full bg-gray-100 rounded-full h-4 mb-2 overflow-hidden">
@@ -229,12 +234,12 @@ export default function CustomerProfile() {
               <p className="text-xs font-bold text-ink/50 uppercase mb-3">Test Retention Strategies</p>
               {simulationOptions.length > 0 ? simulationOptions.map((action, idx) => (
                 <button 
-                  key={idx} 
+                  key={idx}
                   onClick={() => handleSimulate(action)}
                   className={`w-full flex items-center justify-between p-3 border-2 rounded-xl text-sm font-bold transition-all ${
                     selectedAction === action.name 
-                     ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)] text-[var(--color-brand-dark)]' 
-                     : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'
+                      ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)] text-[var(--color-brand-dark)]' 
+                      : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'
                   }`}
                 >
                   {action.name}

@@ -1,7 +1,7 @@
 const styles = {
     "Healthy": "bg-emerald-50 text-emerald-700 border-emerald-200",
     "Moderate Risk": "bg-amber-50 text-amber-700 border-amber-200",
-    "High Risk": "bg-rose-50 text-rose-700 border-rose-200",
+    "High Risk": "bg-rose-50 text-rose-700 border-rose-200"
 };
 
 export default function RiskBadge({ risk }) {

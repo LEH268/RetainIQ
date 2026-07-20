@@ -1,15 +1,13 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Users, LogOut, Sparkles, PieChart, BarChart2, Target, Layers, Settings, Megaphone } from "lucide-react";
+import { LayoutDashboard, Users, LogOut, Sparkles, BarChart2, Layers, Settings, Megaphone } from "lucide-react";
 
 const navItems = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
     { to: "/customers", label: "Customers", icon: Users },
-    { to: "/recommendations", label: "Recommendations", icon: Target },
     { to: "/segmentation", label: "Segmentation", icon: Layers },
-    { to: "/analytics", label: "Analytics", icon: BarChart2 },
-    { to: "/reports", label: "Reports", icon: PieChart },
+    { to: "/analytics", label: "Analytics & Reports", icon: BarChart2 },
     { to: "/campaigns", label: "Campaigns", icon: Megaphone },
-    { to: "/settings", label: "Settings", icon: Settings },
+    { to: "/settings", label: "Settings", icon: Settings }
 ];
 
 export default function Sidebar({ onLogout }) {

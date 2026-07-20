@@ -11,12 +11,12 @@ export default function Customers() {
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState("");
-  
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
   const statusFilter = searchParams.get("status") || "All";
   const riskFilter = searchParams.get("risk") || "All";
   const segmentFilter = searchParams.get("segment") || "All";
+  const planFilter = searchParams.get("plan") || "All";
 
   useEffect(() => {
     api.get("/api/customers").then(res => {
@@ -37,7 +37,7 @@ export default function Customers() {
     }
     setSearchParams(newParams);
   };
-  
+
   const handleSort = (key) => {
     let direction = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
@@ -47,13 +47,14 @@ export default function Customers() {
   const filtered = useMemo(() => {
     let result = customers.filter((c) => {
       const matchesQuery = query === "" || 
-        c.name.toLowerCase().includes(query.toLowerCase()) || 
-        c.company.toLowerCase().includes(query.toLowerCase());
+         c.name.toLowerCase().includes(query.toLowerCase()) || 
+         c.company.toLowerCase().includes(query.toLowerCase());
       const matchesStatus = statusFilter === "All" || c.status === statusFilter;
       const matchesRisk = riskFilter === "All" || c.risk === riskFilter;
       const matchesSegment = segmentFilter === "All" || c.segment === segmentFilter;
+      const matchesPlan = planFilter === "All" || c.plan === planFilter;
       
-      return matchesQuery && matchesStatus && matchesRisk && matchesSegment;
+      return matchesQuery && matchesStatus && matchesRisk && matchesSegment && matchesPlan;
     });
 
     if (sortConfig.key) {
@@ -63,9 +64,8 @@ export default function Customers() {
             return 0;
         });
     }
-
     return result;
-  }, [query, statusFilter, riskFilter, segmentFilter, customers, sortConfig]);
+  }, [query, statusFilter, riskFilter, segmentFilter, planFilter, customers, sortConfig]);
 
   const handleExport = () => {
     const exportData = filtered.map(c => ({
@@ -121,6 +121,7 @@ export default function Customers() {
           
           <select value={segmentFilter} onChange={(e) => updateFilters("segment", e.target.value)} className="rounded-lg border-2 border-[var(--color-border)] bg-white px-3 py-1.5 text-sm font-medium outline-none focus:border-[var(--color-brand)] cursor-pointer">
             <option value="All">All Segments</option>
+            <option value="VVIP">VVIP</option>
             <option value="VIP">VIP</option>
             <option value="Loyal">Loyal</option>
             <option value="New">New</option>
@@ -128,7 +129,15 @@ export default function Customers() {
             <option value="Inactive">Inactive</option>
           </select>
 
-          {(statusFilter !== "All" || riskFilter !== "All" || segmentFilter !== "All") && (
+          <select value={planFilter} onChange={(e) => updateFilters("plan", e.target.value)} className="rounded-lg border-2 border-[var(--color-border)] bg-white px-3 py-1.5 text-sm font-medium outline-none focus:border-[var(--color-brand)] cursor-pointer">
+            <option value="All">All Plans</option>
+            <option value="Premium Student (RM 9.50/mo)">Premium Student (RM 9.50/mo)</option>
+            <option value="Premium Individual (RM 17.50/mo)">Premium Individual (RM 17.50/mo)</option>
+            <option value="Premium Duo (RM 24.50/mo)">Premium Duo (RM 24.50/mo)</option>
+            <option value="Premium Family (RM 27.90/mo)">Premium Family (RM 27.90/mo)</option>
+          </select>
+
+          {(statusFilter !== "All" || riskFilter !== "All" || segmentFilter !== "All" || planFilter !== "All") && (
             <button onClick={() => setSearchParams(new URLSearchParams())} className="text-xs font-bold text-[var(--color-brand)] hover:underline ml-auto">
               Clear Filters
             </button>
@@ -143,6 +152,7 @@ export default function Customers() {
               <th className="px-6 py-4">Customer</th>
               <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4">Segment</th>
+              <th className="px-6 py-4">Plan</th>
               <th className="px-6 py-4 cursor-pointer hover:text-[var(--color-brand)]" onClick={() => handleSort('healthScore')}>
                 Health Score {sortConfig.key === 'healthScore' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
               </th>
@@ -156,7 +166,7 @@ export default function Customers() {
           <tbody className="divide-y divide-[var(--color-border)]">
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-6 py-16 text-center">
+                <td colSpan={8} className="px-6 py-16 text-center">
                   <div className="flex flex-col items-center gap-2 text-[var(--color-brand)]">
                     <Loader2 size={32} className="animate-spin" />
                     <p className="font-bold text-lg text-ink">Syncing Database...</p>
@@ -165,7 +175,7 @@ export default function Customers() {
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-16 text-center">
+                <td colSpan={8} className="px-6 py-16 text-center">
                   <div className="flex flex-col items-center gap-2 text-ink/50">
                     <Search size={32} />
                     <p className="font-bold text-lg">No customers found</p>
@@ -183,6 +193,9 @@ export default function Customers() {
                   <span className={`px-2.5 py-1 text-xs font-bold rounded-md border ${c.status === 'Active' ? 'bg-green-50 text-green-700 border-green-200' : c.status === 'Cancelled' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>{c.status}</span>
                 </td>
                 <td className="px-6 py-4"><span className="px-2.5 py-1 bg-gray-50 border border-gray-200 text-gray-700 rounded-md text-xs font-bold shadow-sm">{c.segment}</span></td>
+                
+                <td className="px-6 py-4 font-bold text-ink/80">{c.plan || 'N/A'}</td>
+                
                 <td className="px-6 py-4 font-bold text-lg">{c.healthScore}<span className="text-xs text-ink/40 font-medium">/100</span></td>
                 <td className="px-6 py-4 font-bold text-lg">{c.churnProbability}%</td>
                 <td className="px-6 py-4"><RiskBadge risk={c.risk} /></td>

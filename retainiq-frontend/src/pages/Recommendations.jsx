@@ -33,7 +33,11 @@ export default function Recommendations() {
   };
 
   if (loading) {
-    return <div className="flex h-screen items-center justify-center font-display text-lg text-ink/50"><Loader2 className="animate-spin mr-2"/> Syncing AI Recommendations...</div>;
+    return (
+      <div className="flex h-screen items-center justify-center font-display text-lg text-ink/50">
+        <Loader2 className="animate-spin mr-2"/> Syncing AI Recommendations...
+      </div>
+    );
   }
 
   return (
@@ -55,7 +59,7 @@ export default function Recommendations() {
         ) : (
           recs.map((rec) => (
             <div key={rec.id} className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6 hover:shadow-md transition-shadow relative overflow-hidden">
-               
+              
               {actionStatus[rec.id] && (
                 <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-10 flex items-center justify-center">
                   <div className={`font-bold text-lg flex items-center gap-2 ${actionStatus[rec.id].includes('Apply') ? 'text-emerald-600' : 'text-gray-500'}`}>
@@ -88,7 +92,7 @@ export default function Recommendations() {
                   <p><strong>AI Rationale:</strong> {rec.reason}</p>
                 </div>
               </div>
-               
+              
               <div className="flex flex-col gap-4 w-full md:w-auto md:min-w-[200px]">
                 <div className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
                   <span className="text-xs font-bold text-ink/60">Priority</span>
@@ -99,6 +103,7 @@ export default function Recommendations() {
                   <button onClick={() => handleAction(rec.id, 'reject')} className="px-3 bg-white border border-rose-200 text-rose-600 rounded-lg hover:bg-rose-50 font-bold text-sm shadow-sm">Reject</button>
                 </div>
               </div>
+
             </div>
           ))
         )}

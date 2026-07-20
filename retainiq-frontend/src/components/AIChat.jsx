@@ -25,7 +25,6 @@ export default function AIChat() {
     setMessages(prev => [...prev, { sender: "user", text: userMsg }]);
     setInput("");
     setIsTyping(true);
-
     try {
       const res = await api.post('/api/ai/chat', { message: userMsg });
       setMessages(prev => [...prev, { sender: "ai", text: res.data.reply }]);
