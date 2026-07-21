@@ -43,7 +43,7 @@ export default function Customers() {
 
     setLoading(true);
     api
-      .get(`/api/customers?${params.toString()}`)
+      .get(`/customers?${params.toString()}`)
       .then((res) => {
         setCustomers(res.data.map(mapCustomer));
         setPage(1);
@@ -54,7 +54,7 @@ export default function Customers() {
 
   useEffect(() => {
     api
-      .get("/api/customers/facets")
+      .get("/customers/facets")
       .then((res) => setFacets(res.data))
       .catch(() => setFacets(null));
   }, []);

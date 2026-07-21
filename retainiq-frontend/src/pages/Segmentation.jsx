@@ -28,7 +28,7 @@ export default function Segmentation() {
 
   useEffect(() => {
     api
-      .get("/api/segments")
+      .get("/segments")
       .then((res) => {
         setSegments(res.data);
         setSelectedSeg(res.data.find((s) => s.name === "At Risk") || res.data[0] || null);
@@ -37,7 +37,7 @@ export default function Segmentation() {
       .finally(() => setLoading(false));
 
     api
-      .get("/api/segments/action-library")
+      .get("/segments/action-library")
       .then((res) => setLibrary(res.data.actions || []))
       .catch(() => setLibrary([]));
   }, []);
@@ -48,7 +48,7 @@ export default function Segmentation() {
     setBulkActionStatus("");
     setEditingIndex(null);
     api
-      .get(`/api/segments/${encodeURIComponent(segment.name)}/actions?count=4`)
+      .get(`/segments/${encodeURIComponent(segment.name)}/actions?count=4`)
       .then((res) => {
         setProtocol((res.data.actions || []).map((text) => ({ text, selected: true })));
         setAiGenerated(res.data.aiGenerated);
@@ -101,7 +101,7 @@ export default function Segmentation() {
     setIsProcessing(true);
     setBulkActionStatus("");
     try {
-      const res = await api.post("/api/segments/bulk-action", {
+      const res = await api.post("/segments/bulk-action", {
         segment: selectedSeg.name,
         actions: selectedActions,
       });

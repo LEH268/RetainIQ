@@ -15,7 +15,7 @@ export default function Reports() {
   const [reportPeriod, setReportPeriod] = useState("Monthly");
 
   useEffect(() => {
-     api.get('/api/reports').then(res => setReportData(res.data)).catch(console.error);
+     api.get('/reports').then(res => setReportData(res.data)).catch(console.error);
   }, []);
 
   const handleExport = () => {
@@ -78,7 +78,7 @@ export default function Reports() {
   const handleExcelExport = async () => {
     setIsExportingExcel(true);
     try {
-      const res = await api.get("/api/customers");
+      const res = await api.get("/customers");
       const customers = res.data.map(mapCustomer);
       const exportData = customers.map(c => ({
         Customer_Name: c.name, Segment: c.segment, Health_Score: c.healthScore,

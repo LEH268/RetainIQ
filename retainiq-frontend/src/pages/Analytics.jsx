@@ -22,8 +22,8 @@ export default function Analytics() {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      api.get(`/api/analytics?timeframe=${timeframe}&compare=${isComparing}`),
-      api.get(`/api/analytics/kpis?timeframe=${timeframe}&compare=${isComparing}`),
+      api.get(`/analytics?timeframe=${timeframe}&compare=${isComparing}`),
+      api.get(`/analytics/kpis?timeframe=${timeframe}&compare=${isComparing}`),
     ])
       .then(([seriesRes, kpiRes]) => {
         setChartData(seriesRes.data);
@@ -36,7 +36,7 @@ export default function Analytics() {
 
   useEffect(() => {
     api
-      .get("/api/analytics/summary")
+      .get("/analytics/summary")
       .then((res) => setSummary(res.data.summary || []))
       .catch(() => setSummary([]))
       .finally(() => setSummaryLoading(false));

@@ -8,7 +8,7 @@ export default function Recommendations() {
   const [actionStatus, setActionStatus] = useState({});
 
   useEffect(() => {
-    api.get("/api/recommendations").then(res => {
+    api.get("/recommendations").then(res => {
       setRecs(res.data);
       setLoading(false);
     }).catch(err => {
@@ -21,7 +21,7 @@ export default function Recommendations() {
     setActionStatus(prev => ({ ...prev, [id]: type === 'apply' ? 'Applying...' : 'Rejecting...' }));
     
     try {
-        await api.post(`/api/recommendations/${id}/action`, { type });
+        await api.post(`/recommendations/${id}/action`, { type });
         setActionStatus(prev => ({ ...prev, [id]: type === 'apply' ? 'Applied Successfully' : 'Rejected' }));
         
         setTimeout(() => {

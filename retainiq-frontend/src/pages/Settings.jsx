@@ -8,7 +8,7 @@ export default function Settings() {
   const [savedSettings, setSavedSettings] = useState({ name: "", role: "", company: "" });
 
   const loadSettings = useCallback(() => {
-    return api.get('/api/settings').then(res => {
+    return api.get('/settings').then(res => {
       setSettings(res.data);
       setSavedSettings(res.data);
     });
@@ -21,7 +21,7 @@ export default function Settings() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-        const res = await api.post('/api/settings', settings);
+        const res = await api.post('/settings', settings);
         setSettings(res.data);
         setSavedSettings(res.data);
         alert("Settings saved to backend!");

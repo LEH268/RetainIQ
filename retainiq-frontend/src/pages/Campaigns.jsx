@@ -80,7 +80,7 @@ export default function Campaigns() {
 
   const loadCampaigns = useCallback(async () => {
     try {
-      const res = await api.get("/api/campaigns");
+      const res = await api.get("/campaigns");
       setCampaigns(res.data);
       setLoadError("");
     } catch {
@@ -119,7 +119,7 @@ export default function Campaigns() {
     setRecipients(null);
     setShowViewModal(true);
     try {
-      const res = await api.get(`/api/campaigns/${campaign.id}/recipients?limit=5`);
+      const res = await api.get(`/campaigns/${campaign.id}/recipients?limit=5`);
       setRecipients(res.data);
     } catch {
       setRecipients({ total: campaign.recipientCount || 0, sample: [] });
@@ -130,7 +130,7 @@ export default function Campaigns() {
     if (!window.confirm(`Delete "${campaign.name}"? This cannot be undone.`)) return;
     setDeletingId(campaign.id);
     try {
-      await api.delete(`/api/campaigns/${campaign.id}`);
+      await api.delete(`/campaigns/${campaign.id}`);
       setCampaigns((prev) => prev.filter((item) => item.id !== campaign.id));
       setToast(`Deleted "${campaign.name}".`);
     } catch {
@@ -149,7 +149,7 @@ export default function Campaigns() {
     setFormError("");
     setIsGenerating(true);
     try {
-      const res = await api.post("/api/ai/generate-email", {
+      const res = await api.post("/ai/generate-email", {
         name: campaignForm.name,
         target: campaignForm.target,
         objective: campaignForm.objective,
@@ -202,12 +202,12 @@ export default function Campaigns() {
 
     try {
       if (campaignForm.id) {
-        const res = await api.put(`/api/campaigns/${campaignForm.id}`, payload);
+        const res = await api.put(`/campaigns/${campaignForm.id}`, payload);
         setCampaigns((prev) =>
           prev.map((item) => (item.id === res.data.id ? res.data : item))
         );
       } else {
-        const res = await api.post("/api/campaigns", payload);
+        const res = await api.post("/campaigns", payload);
         setCampaigns((prev) => [res.data, ...prev]);
       }
 

@@ -18,10 +18,10 @@ export default function CustomerProfile() {
   const [insightsError, setInsightsError] = useState("");
 
   useEffect(() => {
-      api.get(`/api/customers/${id}`).then(res => {
+      api.get(`/customers/${id}`).then(res => {
         setCustomer(mapCustomer(res.data));
         
-        api.get(`/api/ai/simulate-options/${id}`).then(simRes => {
+        api.get(`/ai/simulate-options/${id}`).then(simRes => {
             setSimulationOptions(simRes.data.options || []);
         }).catch(() => {
             setSimulationOptions([]);
@@ -37,7 +37,7 @@ export default function CustomerProfile() {
   useEffect(() => {
     setInsightsLoading(true);
     setInsightsError("");
-    api.get(`/api/ai/explain/${id}`)
+    api.get(`/ai/explain/${id}`)
       .then(res => setInsights(res.data.insights || []))
       .catch(err => {
         setInsightsError(
@@ -53,7 +53,7 @@ export default function CustomerProfile() {
     setSelectedAction(action.name);
     setIsSimulating(true);
     try {
-        const res = await api.post('/api/ai/simulate', { customerId: id, action: action.name });
+        const res = await api.post('/ai/simulate', { customerId: id, action: action.name });
         setSimulatedChurn(res.data.newChurnProbability);
     } catch (err) {
         alert("Simulation API failed. Make sure backend /api/ai/simulate is configured.");
@@ -64,7 +64,7 @@ export default function CustomerProfile() {
 
   const handleApplyAction = async () => {
     try {
-        await api.post(`/api/recommendations/${id}/action`, { 
+        await api.post(`/recommendations/${id}/action`, { 
             type: 'apply',
             action: selectedAction || customer?.recommendation?.action 
         });
