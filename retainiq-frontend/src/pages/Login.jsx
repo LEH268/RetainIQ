@@ -5,7 +5,7 @@ import { auth } from "../lib/firebase";
 import logo from "../assets/RetainIQ Logo.png";
 
 export default function Login() {
-  const [email, setEmail] = useState("john@company.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
