@@ -144,7 +144,7 @@ def _series_metrics(rows):
     }
 
 
-@router.get("/analytics/range")
+@router.get("/analytics")
 def analytics_range():
     """Return the selectable date bounds so the UI can constrain its pickers."""
     customers = get_customers()
