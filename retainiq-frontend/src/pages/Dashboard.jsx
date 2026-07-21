@@ -39,7 +39,7 @@ export default function Dashboard() {
 
   const fetchAiInsights = useCallback(async () => {
     try {
-      const res = await api.get("/api/ai/generate-insights");
+      const res = await api.get("/ai/generate-insights");
       setAiInsights(res.data.insights || []);
     } catch {
       setAiInsights(["AI insights unavailable. Check ANTHROPIC_API_KEY in the backend."]);
