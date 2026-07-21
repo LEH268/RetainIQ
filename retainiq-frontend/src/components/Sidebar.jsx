@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { LayoutDashboard, Users, LogOut, Sparkles, BarChart2, Layers, Settings, Megaphone } from "lucide-react";
+import logo from "../assets/RetainIQ Logo.png";
 
 const navItems = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -16,9 +17,9 @@ export default function Sidebar({ onLogout }) {
             <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-[var(--color-brand)]/20 to-[var(--color-accent)]/20 blur-2xl z-0 pointer-events-none"></div>
             
             <div className="z-10 relative">
-                <div className="mb-8 px-3 flex items-center gap-2">
-                    <div className="p-2 bg-gradient-to-br from-[var(--color-brand)] to-[var(--color-accent)] rounded-lg shadow-lg">
-                        <Sparkles className="text-white" size={20} />
+                <div className="mb-8 px-3 flex items-center gap-3">
+                    <div className="p-1.5 bg-white rounded-lg shadow-lg flex items-center justify-center">
+                        <img src={logo} alt="RetainIQ Logo" className="w-7 h-7 object-contain" />
                     </div>
                     <span className="font-display text-2xl font-bold tracking-tight text-white">RetainIQ</span>
                 </div>
