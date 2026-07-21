@@ -28,7 +28,7 @@ export default function Dashboard() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await api.get("/api/dashboard/stats");
+      const res = await api.get("/dashboard/stats");
       setStats(res.data);
     } catch {
       setError("Failed to load dashboard statistics. Is the backend running?");
