@@ -18,7 +18,7 @@ export default function AIChat() {
   useEffect(() => {
     if (!isOpen) return;
     api
-      .get("/api/ai/status")
+      .get("/ai/status")
       .then((res) => setAiStatus(res.data))
       .catch(() => setAiStatus(null));
   }, [isOpen]);
@@ -37,7 +37,7 @@ export default function AIChat() {
     setInput("");
     setIsTyping(true);
     try {
-      const res = await api.post("/api/ai/chat", { message: userMsg });
+      const res = await api.post("/ai/chat", { message: userMsg });
       setMessages((prev) => [
         ...prev,
         { sender: "ai", text: res.data.reply, degraded: res.data.aiGenerated === false },
