@@ -1,15 +1,19 @@
 """AI-powered endpoints: chat, explanations, simulation, email, insights."""
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from data_processing.dataset_loader import get_customer_by_id, get_customers
 from services.ai_client import (
     AIClientError,
+    ai_status,
     generate_json_list,
     generate_text,
-    is_configured,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -37,7 +41,7 @@ SIMULATION_ACTIONS = [
 ]
 
 INSIGHTS_FALLBACK = [
-    "Set GEMINI_API_KEY in the backend .env to generate live AI insights.",
+    "Set OPENAI_API_KEY in the backend .env to generate live AI insights.",
     "All metrics shown on this dashboard are computed directly from the dataset.",
 ]
 
@@ -108,7 +112,6 @@ Average churn probability: {average_churn}%"""
 @router.get("/ai/status")
 def ai_status_endpoint():
     """Report AI availability with an actionable message for the UI."""
-    from services.ai_client import ai_status
     return ai_status()
 
 
@@ -117,7 +120,11 @@ def generate_insights():
     """Return AI-written business insights grounded in cohort metrics."""
     context, stats = _cohort_context()
     if not stats:
-        return {"insights": INSIGHTS_FALLBACK, "aiGenerated": False}
+        return {
+            "insights": INSIGHTS_FALLBACK,
+            "aiGenerated": False,
+            "reason": "No customers loaded from the dataset.",
+        }
 
     prompt = f"""You are reviewing a Spotify-style subscription customer base.
 
@@ -138,15 +145,23 @@ Return a JSON array of 4 strings and nothing else."""
         fallback=INSIGHTS_FALLBACK,
     )
 
+    ai_generated = insights != INSIGHTS_FALLBACK
+    if not ai_generated:
+        logger.warning(
+            "Insights fell back to static text. AI status: %s", ai_status()
+        )
+
     return {
         "insights": insights[:4],
-        "aiGenerated": insights != INSIGHTS_FALLBACK,
+        "aiGenerated": ai_generated,
+        "aiState": ai_status()["state"],
     }
 
 
 @router.post("/ai/chat")
 def chat(payload: ChatMessage):
     """Answer a free-form question about the customer dataset.
+
     Falls back to a deterministic data summary when the AI service is
     unreachable, so the chat panel is never dead.
     """
@@ -181,6 +196,7 @@ so plainly and suggest what would be needed. Keep the reply under 120 words."""
         )
         return {"reply": reply, "aiGenerated": True}
     except AIClientError as exc:
+        logger.warning("Chat fell back to raw figures: %s", exc)
         # Return 200 with the raw figures rather than a dead error bubble.
         fallback = (
             f"The AI service is unavailable, so here are the current figures "
@@ -231,9 +247,17 @@ under 20 words. Return a JSON array of strings and nothing else."""
         fallback=fallback,
     )
 
+    ai_generated = insights != fallback
+    if not ai_generated:
+        logger.warning(
+            "Explanation for %s fell back to static text. AI status: %s",
+            customer_id,
+            ai_status(),
+        )
+
     return {
         "insights": insights[:4],
-        "aiGenerated": insights != fallback,
+        "aiGenerated": ai_generated,
     }
 
 
@@ -316,50 +340,11 @@ Return the email text only."""
             max_tokens=500,
         )
     except AIClientError as exc:
+        logger.warning("Email generation failed: %s", exc)
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     return {
         "email": email,
         "emailDraft": email,
         "recipientCount": count,
-    }
-
-@router.get("/ai/generate-insights")
-def generate_dashboard_insights():
-
-    customers = get_customers()
-
-    total = len(customers)
-
-    high_risk = len(
-        [
-            c for c in customers
-            if c["risk_level"] == "High Risk"
-        ]
-    )
-
-    moderate_risk = len(
-        [
-            c for c in customers
-            if c["risk_level"] == "Moderate Risk"
-        ]
-    )
-
-    healthy = len(
-        [
-            c for c in customers
-            if c["risk_level"] == "Healthy"
-        ]
-    )
-
-
-    insights = [
-        f"{high_risk} customers are currently classified as high churn risk.",
-        f"{moderate_risk} customers require monitoring and engagement.",
-        f"{healthy} customers show healthy usage behaviour.",
-    ]
-
-
-    return {
-        "insights": insights
     }

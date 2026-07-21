@@ -2,17 +2,30 @@
 
 import logging
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
-load_dotenv()
+# Load .env relative to this file, not the current working directory, so the
+# server behaves identically whether started from the repo root or from
+# retainiq-backend/. Must run before any module that reads os.environ at import.
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
+
+from fastapi import FastAPI  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
+
+logger = logging.getLogger(__name__)
+
+if not os.getenv("GROQ_API_KEY"):
+    logger.warning(
+        "GROQ_API_KEY not found after loading..."
+    )
 
 from api import (  # noqa: E402  (import after load_dotenv)
     ai,
@@ -71,9 +84,9 @@ def root():
 
 @app.get("/api/health")
 def health():
-    """Return a health check including dataset and model readiness."""
+    """Return a health check including dataset, model, and AI readiness."""
     from data_processing.dataset_loader import get_customers
-    from services.ai_client import is_configured
+    from services.ai_client import ai_status
     from services.churn_model import get_metrics
 
     try:
@@ -82,12 +95,18 @@ def health():
     except Exception as exc:
         customer_count = 0
         dataset_ok = False
-        logging.error("Dataset unavailable: %s", exc)
+        logger.error("Dataset unavailable: %s", exc)
+
+    status = ai_status()
 
     return {
         "status": "ok" if dataset_ok else "degraded",
         "datasetLoaded": dataset_ok,
         "customerCount": customer_count,
-        "aiConfigured": is_configured(),
+        "aiConfigured": status["available"],
+        "aiState": status["state"],
+        "aiMessage": status["message"],
+        "envPath": str(BASE_DIR / ".env"),
+        "envFileFound": (BASE_DIR / ".env").exists(),
         "modelMetrics": get_metrics(),
     }

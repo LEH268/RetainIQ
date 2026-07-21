@@ -164,7 +164,7 @@ export default function Campaigns() {
     } catch (error) {
       setFormError(
         error.response?.status === 503
-          ? "AI service is not configured. Set GEMINI_API_KEY in retainiq-backend/.env, or write the email manually below."
+          ? "AI service is not configured. Set OPENAI_API_KEY in retainiq-backend/.env, or write the email manually below."
           : "Email generation failed. You can still write the content manually below."
       );
       setCampaignForm((prev) => ({

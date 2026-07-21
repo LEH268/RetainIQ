@@ -42,7 +42,7 @@ export default function Dashboard() {
       const res = await api.get("/ai/generate-insights");
       setAiInsights(res.data.insights || []);
     } catch {
-      setAiInsights(["AI insights unavailable. Check ANTHROPIC_API_KEY in the backend."]);
+      setAiInsights(["AI insights unavailable. Check OPENAI_API_KEY in the backend."]);
     } finally {
       setLoadingAi(false);
     }

@@ -9,7 +9,7 @@ export default function AIChat() {
   const [messages, setMessages] = useState([
     {
       sender: "ai",
-      text: "Hello. I'm RetainIQ AI. Ask me anything about the customer dataset.",
+      text: "Hello. I'm RetainIQ AI, powered by OpenAI. Ask me anything about the customer dataset.",
     },
   ]);
   const [input, setInput] = useState("");

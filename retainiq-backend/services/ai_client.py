@@ -1,4 +1,4 @@
-"""Thin wrapper around the Google Gemini API with caching, retries, and JSON helpers.
+"""Thin wrapper around the Groq API (via OpenAI SDK) with caching, retries, and JSON helpers.
 
 The public interface (generate_text, generate_json_list, is_configured,
 AIClientError) is unchanged, so no calling code needs to be touched.
@@ -13,12 +13,12 @@ import re
 import threading
 import time
 
-from google import genai
-from google.genai import types
+from openai import OpenAI
+import openai
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+DEFAULT_MODEL = os.environ.get("OPENAI_MODEL", "llama-3.3-70b-versatile")
 CACHE_TTL_SECONDS = int(os.environ.get("AI_CACHE_TTL", "1800"))
 
 MAX_RETRIES = 3
@@ -43,8 +43,8 @@ class AIClientError(Exception):
 
 
 def _api_key():
-    """Return the configured Gemini API key, if any."""
-    return os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    """Return the configured Groq API key, if any."""
+    return os.environ.get("GROQ_API_KEY")
 
 
 def is_configured():
@@ -53,7 +53,7 @@ def is_configured():
 
 
 def _get_client():
-    """Return a lazily constructed Gemini client."""
+    """Return a lazily constructed Groq client."""
     global _client
     if _client is not None:
         return _client
@@ -61,12 +61,15 @@ def _get_client():
     key = _api_key()
     if not key:
         raise AIClientError(
-            "GEMINI_API_KEY is not set. Add it to retainiq-backend/.env"
+            "GROQ_API_KEY is not set. Add it to retainiq-backend/.env"
         )
 
     with _client_lock:
         if _client is None:
-            _client = genai.Client(api_key=key)
+            _client = OpenAI(
+                api_key=key,
+                base_url="https://api.groq.com/openai/v1"
+            )
     return _client
 
 
@@ -105,19 +108,19 @@ def _classify_error(exc):
     """Categorise an API exception.
 
     Returns one of: 'quota_exhausted', 'rate_limited', 'auth', 'other'.
-
+    
     The distinction between the first two matters: a transient per-minute
     limit is worth retrying, but a zero or daily-capped quota is not — the
     same call will fail identically for hours.
     """
     text = str(exc).lower()
 
-    if "401" in text or "403" in text or "api key not valid" in text:
+    if isinstance(exc, openai.AuthenticationError) or "401" in text or "403" in text or "invalid api key" in text:
         return "auth"
 
-    if "429" in text or "resource_exhausted" in text or "quota" in text:
-        # "limit: 0" means the project has no allocation for this model.
-        if "limit: 0" in text:
+    if isinstance(exc, openai.RateLimitError) or "429" in text or "quota" in text or "insufficient_quota" in text:
+        # Check for absolute zero quota or insufficient credits
+        if "insufficient_quota" in text or "limit: 0" in text or "exceeded your current quota" in text:
             return "quota_exhausted"
         # A per-day cap will not reset within any reasonable retry window.
         if "perday" in text.replace("_", "").replace(" ", ""):
@@ -134,7 +137,7 @@ def _set_quota_block(reason):
         _quota_blocked_until = time.time() + QUOTA_COOLDOWN_SECONDS
         _quota_reason = reason
     logger.warning(
-        "Gemini quota exhausted; suppressing AI calls for %ds. %s",
+        "Groq quota exhausted; suppressing AI calls for %ds. %s",
         QUOTA_COOLDOWN_SECONDS, reason,
     )
 
@@ -162,7 +165,7 @@ def ai_status():
             "state": "not_configured",
             "model": DEFAULT_MODEL,
             "message": (
-                "GEMINI_API_KEY is not set. Add it to retainiq-backend/.env "
+                "GROQ_API_KEY is not set. Add it to retainiq-backend/.env "
                 "and restart the server."
             ),
         }
@@ -175,7 +178,7 @@ def ai_status():
             "model": DEFAULT_MODEL,
             "retryInSeconds": cooldown,
             "message": (
-                f"Gemini quota exhausted for {DEFAULT_MODEL}. {_quota_reason} "
+                f"Groq quota exhausted for {DEFAULT_MODEL}. {_quota_reason} "
                 "All figures on screen are computed from the dataset and remain "
                 "accurate; only AI-written narrative is unavailable."
             ),
@@ -192,30 +195,21 @@ def ai_status():
 def _quota_message():
     """Return an actionable message for a hard quota failure."""
     return (
-        f"Gemini reported zero available quota for {DEFAULT_MODEL}. This is not "
-        "a temporary rate limit. Create a new API key in a new project at "
-        "aistudio.google.com/apikey, or set GEMINI_MODEL to a different model "
-        "such as gemini-2.0-flash-lite, then restart the backend."
+        f"Groq reported zero available quota for {DEFAULT_MODEL}. This is not "
+        "a temporary rate limit. Check your billing details or set OPENAI_MODEL "
+        "to a different model, then restart the backend."
     )
 
 
 def _extract_text(response):
-    """Pull plain text out of a Gemini response object."""
-    direct = getattr(response, "text", None)
-    if direct:
-        return direct.strip()
-
-    parts = []
-    for candidate in getattr(response, "candidates", []) or []:
-        content = getattr(candidate, "content", None)
-        for part in getattr(content, "parts", []) or []:
-            text = getattr(part, "text", None)
-            if text:
-                parts.append(text)
-    return "".join(parts).strip()
+    """Pull plain text out of a Groq/OpenAI response object."""
+    try:
+        return response.choices[0].message.content.strip()
+    except (AttributeError, IndexError):
+        return ""
 
 
-def _call_model(client, user_prompt, config):
+def _call_model(client, messages, max_tokens):
     """Execute one generation with retries, honouring the quota cooldown.
 
     Retries only transient per-minute limits. Hard quota exhaustion and auth
@@ -231,14 +225,16 @@ def _call_model(client, user_prompt, config):
 
     for attempt in range(MAX_RETRIES):
         try:
-            response = client.models.generate_content(
+            response = client.chat.completions.create(
                 model=DEFAULT_MODEL,
-                contents=user_prompt,
-                config=config,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=0.7
             )
             text = _extract_text(response)
+            
             if not text:
-                raise AIClientError("Gemini returned an empty response.")
+                raise AIClientError("Groq returned an empty response.")
             return text
 
         except AIClientError:
@@ -254,14 +250,14 @@ def _call_model(client, user_prompt, config):
 
             if category == "auth":
                 raise AIClientError(
-                    "Gemini rejected the API key. Verify GEMINI_API_KEY in "
+                    "Groq rejected the API key. Verify GROQ_API_KEY in "
                     "retainiq-backend/.env is correct and not expired."
                 ) from exc
 
             if category == "rate_limited" and attempt < MAX_RETRIES - 1:
                 delay = BASE_BACKOFF_SECONDS * (2 ** attempt) + random.uniform(0, 0.5)
                 logger.warning(
-                    "Gemini rate limited, retrying in %.1fs (attempt %d/%d)",
+                    "Groq rate limited, retrying in %.1fs (attempt %d/%d)",
                     delay, attempt + 1, MAX_RETRIES,
                 )
                 time.sleep(delay)
@@ -271,11 +267,11 @@ def _call_model(client, user_prompt, config):
 
     if _classify_error(last_error) == "rate_limited":
         raise AIClientError(
-            "Gemini rate limit reached after several retries. Wait about a "
+            "Groq rate limit reached after several retries. Wait about a "
             "minute before trying again."
         ) from last_error
 
-    raise AIClientError(f"Gemini API call failed: {last_error}") from last_error
+    raise AIClientError(f"Groq API call failed: {last_error}") from last_error
 
 
 def generate_text(system_prompt, user_prompt, max_tokens=500, use_cache=True):
@@ -290,14 +286,13 @@ def generate_text(system_prompt, user_prompt, max_tokens=500, use_cache=True):
             return cached
 
     client = _get_client()
+    
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
 
-    config = types.GenerateContentConfig(
-        system_instruction=system_prompt,
-        max_output_tokens=max_tokens,
-        temperature=0.7,
-    )
-
-    text = _call_model(client, user_prompt, config)
+    text = _call_model(client, messages, max_tokens)
 
     if use_cache:
         _cache_set(key, text)
@@ -325,7 +320,7 @@ def generate_json_list(system_prompt, user_prompt, max_tokens=500, fallback=None
     """Return a list parsed from the model response, or `fallback` on failure.
 
     Never raises. Callers get usable output whether or not the AI is reachable.
-    Uses Gemini's native JSON output mode for reliable parsing.
+    Uses regex extraction allowing Groq to output JSON without forcing response_format.
     """
     fallback = fallback or []
 
@@ -343,16 +338,15 @@ def generate_json_list(system_prompt, user_prompt, max_tokens=500, fallback=None
         logger.info("AI unavailable, returning fallback: %s", exc)
         return list(fallback)
 
-    config = types.GenerateContentConfig(
-        system_instruction=system_prompt,
-        max_output_tokens=max_tokens,
-        temperature=0.7,
-        response_mime_type="application/json",
-        response_schema={"type": "ARRAY", "items": {"type": "STRING"}},
-    )
+    json_system_prompt = system_prompt + "\n\nIMPORTANT: You must output a valid JSON array or object containing the results."
+    
+    messages = [
+        {"role": "system", "content": json_system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
 
     try:
-        raw = _call_model(client, user_prompt, config)
+        raw = _call_model(client, messages, max_tokens)
     except AIClientError as exc:
         logger.info("AI call failed, returning fallback: %s", exc)
         return list(fallback)
